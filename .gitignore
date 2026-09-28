@@ -1,0 +1,6 @@
+config/db.local.php
+uploads/products/*
+!uploads/products/.gitkeep
+.DS_Store
+.vscode/
+
