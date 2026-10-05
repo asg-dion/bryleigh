@@ -1,5 +1,5 @@
 <?php
-if (!defined('BASE_URL')) define('BASE_URL', '/bryleigh');
+if (!defined('BASE_URL')) define('BASE_URL', '/bryleigh-main');
 function e($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function redirect(string $path): never { header('Location: ' . (str_starts_with($path, 'http') ? $path : BASE_URL . '/' . ltrim($path, '/'))); exit; }
 function flash_set(string $type, string $msg): void { $_SESSION['flash'] = ['type' => $type, 'msg' => $msg]; }
