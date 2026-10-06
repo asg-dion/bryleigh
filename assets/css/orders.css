@@ -1,2 +1,90 @@
-/* OWNER: Member 2 */
+.order-card {
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin-bottom: 24px;
+    background: #fff;
+}
 
+.order-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.order-card-header h2 {
+    margin: 0 0 5px;
+}
+
+.order-card-header p {
+    margin: 0;
+}
+
+.order-status,
+.order-customer,
+.order-shipping,
+.shipping-info {
+    margin-bottom: 20px;
+}
+
+.order-status p,
+.order-customer p,
+.order-shipping p,
+.shipping-info p {
+    margin: 6px 0;
+}
+
+.order-items {
+    margin-bottom: 20px;
+}
+
+.order-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.order-item p {
+    margin: 5px 0 0;
+}
+
+.order-card h3 {
+    margin-top: 20px;
+}
+
+.order-card form {
+    margin-top: 20px;
+}
+
+.order-card .form-group {
+    margin-bottom: 15px;
+}
+
+.order-card label {
+    display: block;
+    font-weight: 600;
+}
+
+.order-card select,
+.order-card input {
+    display: block;
+    width: 100%;
+    max-width: 400px;
+    margin-top: 6px;
+    padding: 9px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+    .order-card-header,
+    .order-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
