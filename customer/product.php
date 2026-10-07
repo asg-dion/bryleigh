@@ -1,4 +1,4 @@
-<?php // OWNER: Member 1
+<?php
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
@@ -7,12 +7,12 @@ $id = filter_var($_GET['id'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_ran
 
 $product = null;
 if ($id) {
-    // Archived products are never shown to customers.
+    // Fetch regardless of status: archived products get their own "no longer available" page.
     $stmt = $pdo->prepare(
         "SELECT p.*, c.category_name
            FROM products p
            JOIN categories c ON c.category_id = p.category_id
-          WHERE p.product_id = ? AND p.status = 'active'
+          WHERE p.product_id = ?
           LIMIT 1"
     );
     $stmt->execute([$id]);
@@ -29,6 +29,53 @@ if (!$product) {
         <p class="muted">This item may have been sold or removed.</p>
         <a class="btn btn-dark" href="<?= BASE_URL ?>/customer/shop.php">Back to products</a>
     </div>
+    <?php
+    require __DIR__ . '/../includes/footer.php';
+    exit;
+}
+
+// ---- Archived: the product exists but is no longer sold ----
+if ($product['status'] !== 'active') {
+    http_response_code(410); // Gone
+    $suggest = $pdo->prepare(
+        "SELECT p.product_id, p.title, p.price, p.item_condition, p.stock, p.image_path, c.category_name
+           FROM products p
+           JOIN categories c ON c.category_id = p.category_id
+          WHERE p.status = 'active' AND p.category_id = ?
+          ORDER BY p.created_at DESC
+          LIMIT 4"
+    );
+    $suggest->execute([$product['category_id']]);
+    $suggest = $suggest->fetchAll();
+
+    $page_title = 'Product no longer available';
+    require __DIR__ . '/../includes/header.php';
+    ?>
+    <div class="empty-state">
+        <h1>Product no longer available</h1>
+        <p class="muted">“<?= e($product['title']) ?>” is no longer available. It may have been sold or taken down.</p>
+        <a class="btn btn-dark" href="<?= BASE_URL ?>/customer/shop.php">Back to products</a>
+    </div>
+    <?php if ($suggest): ?>
+        <h2 class="section-title">You might also like</h2>
+        <div class="product-grid">
+            <?php foreach ($suggest as $p): $soldOut = (int)$p['stock'] <= 0; ?>
+                <article class="product-card<?= $soldOut ? ' sold-out' : '' ?>">
+                    <a href="<?= BASE_URL ?>/customer/product.php?id=<?= (int)$p['product_id'] ?>">
+                        <div class="thumb">
+                            <img src="<?= e(product_image($p['image_path'])) ?>" alt="<?= e($p['title']) ?>" loading="lazy">
+                            <?php if ($soldOut): ?><span class="badge badge-out">Sold out</span><?php endif; ?>
+                        </div>
+                        <div class="info">
+                            <span class="title"><?= e($p['title']) ?></span>
+                            <span class="meta"><?= e($p['item_condition']) ?></span>
+                            <span class="price"><?= e(format_price($p['price'])) ?></span>
+                        </div>
+                    </a>
+                </article>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
     <?php
     require __DIR__ . '/../includes/footer.php';
     exit;

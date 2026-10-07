@@ -1,4 +1,3 @@
-/* OWNER: Member 1 — catalog, product detail, and admin product management styles */
 
 /* ---------- Shared catalog bits ---------- */
 .page-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -72,6 +71,21 @@
 .product-form .current-image img { width: 140px; height: 140px; object-fit: cover; border-radius: 4px; display: block; margin: .35rem 0; background: #e8e8e8; }
 .field-error { color: #8b1e1e; font-size: .85rem; margin-top: .25rem; }
 .form-actions { display: flex; gap: .6rem; margin-top: 1.25rem; }
+
+/* ---------- Admin: dashboard ---------- */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.stat-card { display: flex; flex-direction: column; gap: .35rem; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--ink); border-radius: 4px; padding: 1rem 1.25rem; text-decoration: none; }
+.stat-card:hover { border-color: var(--ink); }
+.stat-card.warn { border-left-color: #c99a2e; }
+.stat-card.danger { border-left-color: #8b1e1e; }
+.stat-label { font-size: .85rem; color: var(--muted); }
+.stat-num { font: 700 2rem monospace; }
+
+/* ---------- Admin: image upload preview ---------- */
+.image-preview { display: flex; gap: 1rem; align-items: center; margin-top: .5rem; }
+.image-preview img { width: 140px; height: 140px; object-fit: cover; border-radius: 4px; background: #e8e8e8; }
+.image-preview .muted { font-size: .85rem; margin-bottom: .5rem; }
+[hidden] { display: none !important; }
 
 @media (max-width: 700px) {
   .product-detail { grid-template-columns: 1fr; }

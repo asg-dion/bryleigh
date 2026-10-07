@@ -1,10 +1,11 @@
-<?php // OWNER: Member 1
+<?php
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_admin();
 
 const IMG_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+const IMG_MAX_SIDE  = 6000;            // px, longest allowed width/height
 const IMG_TYPES     = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
 $conditions = ['Like New', 'Good', 'Fair'];
 
@@ -40,6 +41,12 @@ $form = [
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // If the upload exceeds post_max_size, PHP discards $_POST and $_FILES entirely.
+    if (!$_POST && !$_FILES && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        flash_set('error', 'The upload was too large. Images must be 2 MB or smaller.');
+        redirect('admin/product_form.php' . ($editId ? '?id=' . $editId : ''));
+    }
+
     if (!hash_equals($csrf, (string)($_POST['csrf'] ?? ''))) {
         flash_set('error', 'Your session expired. Please try again.');
         redirect('admin/products.php');
@@ -77,8 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors['image'] = 'Image is too large (2 MB max).';
         } else {
             $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
-            if (!isset(IMG_TYPES[$mime]) || @getimagesize($file['tmp_name']) === false) {
-                $errors['image'] = 'Image must be a JPG, PNG, or WebP file.';
+            $info = @getimagesize($file['tmp_name']);
+            if (!isset(IMG_TYPES[$mime]) || $info === false || $info['mime'] !== $mime) {
+                $errors['image'] = 'Image must be a valid JPG, PNG, or WebP file.';
+            } elseif ($info[0] > IMG_MAX_SIDE || $info[1] > IMG_MAX_SIDE) {
+                $errors['image'] = 'Image dimensions are too large (' . IMG_MAX_SIDE . ' px max per side).';
             } else {
                 $newImage = ['tmp' => $file['tmp_name'], 'ext' => IMG_TYPES[$mime]];
             }
@@ -137,6 +147,8 @@ $err = fn(string $k): string => isset($errors[$k]) ? '<div class="field-error">'
     <a class="btn" href="<?= BASE_URL ?>/admin/products.php">&larr; Back to products</a>
 </div>
 
+<?php /* Stopgap: admin_header.php does not load catalog.css yet. Remove once it does. */ ?>
+<link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/catalog.css">
 <?php if ($errors): ?><div class="error">Please fix the highlighted fields below.</div><?php endif; ?>
 
 <form class="card product-form" method="post" enctype="multipart/form-data" novalidate>
@@ -198,9 +210,18 @@ $err = fn(string $k): string => isset($errors[$k]) ? '<div class="field-error">'
 
     <div class="form-group">
         <label>Product image <span class="muted" style="font-weight:normal">(JPG, PNG or WebP, up to 2 MB)</span>
-            <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
+            <input type="file" id="image-input" name="image" accept="image/jpeg,image/png,image/webp">
         </label>
+        <div class="field-error" id="image-error" hidden></div>
         <?= $err('image') ?>
+        <div class="image-preview" id="image-preview" hidden>
+            <img id="image-preview-img" src="" alt="Selected image preview">
+            <div>
+                <div class="muted" id="image-meta"></div>
+                <button class="btn btn-sm" type="button" id="image-clear">Remove selected image</button>
+                <?php if ($existing && $existing['image_path']): ?><div class="muted">This will replace the current image when you save.</div><?php endif; ?>
+            </div>
+        </div>
         <?php if ($existing && $existing['image_path']): ?>
             <div class="current-image">
                 <img src="<?= e(product_image($existing['image_path'])) ?>" alt="Current image">
@@ -225,4 +246,48 @@ $err = fn(string $k): string => isset($errors[$k]) ? '<div class="field-error">'
         <a class="btn" href="<?= BASE_URL ?>/admin/products.php">Cancel</a>
     </div>
 </form>
+<script>
+(function () {
+    var MAX_BYTES = <?= IMG_MAX_BYTES ?>;
+    var ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
+    var input = document.getElementById('image-input');
+    var box = document.getElementById('image-preview');
+    var img = document.getElementById('image-preview-img');
+    var meta = document.getElementById('image-meta');
+    var error = document.getElementById('image-error');
+    var clearBtn = document.getElementById('image-clear');
+    var objectUrl = null;
+
+    function reset() {
+        if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+        img.removeAttribute('src');
+        box.hidden = true;
+    }
+    function fail(message) {
+        input.value = '';
+        reset();
+        error.textContent = message;
+        error.hidden = false;
+    }
+
+    input.addEventListener('change', function () {
+        error.hidden = true;
+        reset();
+        var file = input.files && input.files[0];
+        if (!file) { return; }
+        if (ALLOWED.indexOf(file.type) === -1) { return fail('Image must be a JPG, PNG, or WebP file.'); }
+        if (file.size > MAX_BYTES) { return fail('Image is too large (2 MB max). This file is ' + (file.size / 1048576).toFixed(1) + ' MB.'); }
+        objectUrl = URL.createObjectURL(file);
+        img.src = objectUrl;
+        meta.textContent = file.name + ' \u00B7 ' + Math.max(1, Math.round(file.size / 1024)) + ' KB';
+        box.hidden = false;
+    });
+
+    clearBtn.addEventListener('click', function () {
+        input.value = '';
+        error.hidden = true;
+        reset();
+    });
+})();
+</script>
 <?php require __DIR__ . '/../includes/admin_footer.php';
