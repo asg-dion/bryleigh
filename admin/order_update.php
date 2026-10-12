@@ -1,3 +1,4 @@
+
 <?php // OWNER: Member 2
 
 require __DIR__ . '/../includes/db.php';
@@ -13,7 +14,8 @@ if ($orderId <= 0) {
     redirect('admin/orders.php');
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_POST['update_order'])) {
 
     $paymentStatus = $_POST['payment_status'] ?? '';
     $shippingStatus = $_POST['shipping_status'] ?? '';
@@ -32,24 +34,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order'])) {
         redirect('admin/order_update.php?order_id=' . $orderId);
     }
 
-    $stmt = $pdo->prepare("
-        UPDATE orders
-        SET
-            payment_status = ?,
-            shipping_status = ?,
-            order_status = ?
-        WHERE order_id = ?
-    ");
+    try {
+        $pdo->beginTransaction();
 
-    $stmt->execute([
-        $paymentStatus,
-        $shippingStatus,
-        $orderStatus,
-        $orderId
-    ]);
+        // Lock the order to prevent simultaneous status changes.
+        $lockStmt = $pdo->prepare("
+            SELECT order_status
+            FROM orders
+            WHERE order_id = ?
+            FOR UPDATE
+        ");
+        $lockStmt->execute([$orderId]);
+        $currentOrder = $lockStmt->fetch();
 
-    flash_set('success', 'Order #' . $orderId . ' has been updated.');
-    redirect('admin/orders.php');
+        if (!$currentOrder) {
+            throw new RuntimeException('Order not found.');
+        }
+
+        $currentStatus = $currentOrder['order_status'];
+
+        // Cancelled orders cannot be reopened using this form.
+        if (
+            $currentStatus === 'cancelled' &&
+            $orderStatus !== 'cancelled'
+        ) {
+            throw new RuntimeException(
+                'A cancelled order cannot be reopened.'
+            );
+        }
+
+        // Restore stock only on the first transition to cancelled.
+        if (
+            $currentStatus !== 'cancelled' &&
+            $orderStatus === 'cancelled'
+        ) {
+            $itemsStmt = $pdo->prepare("
+                SELECT product_id, quantity
+                FROM order_items
+                WHERE order_id = ?
+            ");
+            $itemsStmt->execute([$orderId]);
+            $orderItems = $itemsStmt->fetchAll();
+
+            if (!$orderItems) {
+                throw new RuntimeException(
+                    'Cannot cancel this order because it has no order items.'
+                );
+            }
+
+            $stockStmt = $pdo->prepare("
+                UPDATE products
+                SET stock = stock + ?
+                WHERE product_id = ?
+            ");
+
+            foreach ($orderItems as $item) {
+                $stockStmt->execute([
+                    (int)$item['quantity'],
+                    (int)$item['product_id']
+                ]);
+
+                if ($stockStmt->rowCount() !== 1) {
+                    throw new RuntimeException(
+                        'Could not restore stock for a product in this order.'
+                    );
+                }
+            }
+        }
+
+        $updateStmt = $pdo->prepare("
+            UPDATE orders
+            SET
+                payment_status = ?,
+                shipping_status = ?,
+                order_status = ?
+            WHERE order_id = ?
+        ");
+
+        $updateStmt->execute([
+            $paymentStatus,
+            $shippingStatus,
+            $orderStatus,
+            $orderId
+        ]);
+
+        $pdo->commit();
+
+        flash_set(
+            'success',
+            'Order #' . $orderId . ' has been updated.'
+        );
+        redirect('admin/orders.php');
+
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        flash_set('error', $e->getMessage());
+        redirect('admin/order_update.php?order_id=' . $orderId);
+    }
 }
 
 $orderStmt = $pdo->prepare("
@@ -108,97 +192,67 @@ require __DIR__ . '/../includes/admin_header.php';
 <section class="order-card">
 
     <div class="order-card-header">
-
         <div>
             <h2>Customer</h2>
-
             <p>
                 <strong>Name:</strong>
                 <?= e($order['full_name']) ?>
             </p>
-
             <p>
                 <strong>Email:</strong>
                 <?= e($order['email']) ?>
             </p>
         </div>
 
-        <strong>
-            <?= format_price($order['total_amount']) ?>
-        </strong>
-
+        <strong><?= format_price($order['total_amount']) ?></strong>
     </div>
 
     <h2>Items</h2>
 
-    <?php foreach ($items as $item): ?>
+    <?php if ($items): ?>
+        <?php foreach ($items as $item): ?>
+            <?php
+            $quantity = (int)$item['quantity'];
+            $price = (float)$item['price_at_sale'];
+            $subtotal = $quantity * $price;
+            ?>
 
-        <?php
-        $quantity = (int)$item['quantity'];
-        $price = (float)$item['price_at_sale'];
-        $subtotal = $quantity * $price;
-        ?>
+            <div class="order-item">
+                <div>
+                    <strong><?= e($item['title']) ?></strong>
+                    <p>
+                        <?= $quantity ?> ×
+                        <?= format_price($price) ?>
+                    </p>
+                </div>
 
-        <div class="order-item">
-
-            <div>
-                <strong><?= e($item['title']) ?></strong>
-
-                <p>
-                    <?= $quantity ?> ×
-                    <?= format_price($price) ?>
-                </p>
+                <strong><?= format_price($subtotal) ?></strong>
             </div>
-
-            <strong>
-                <?= format_price($subtotal) ?>
-            </strong>
-
-        </div>
-
-    <?php endforeach; ?>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <p>No items found for this order.</p>
+    <?php endif; ?>
 
     <h2>Shipping Information</h2>
 
-    <p>
-        <strong>Name:</strong>
-        <?= e($order['ship_name']) ?>
-    </p>
-
-    <p>
-        <strong>Phone:</strong>
-        <?= e($order['ship_phone']) ?>
-    </p>
-
-    <p>
-        <strong>Address:</strong>
-        <?= e($order['ship_address']) ?>
-    </p>
-
-    <p>
-        <strong>City:</strong>
-        <?= e($order['ship_city']) ?>
-    </p>
-
-    <p>
-        <strong>Province:</strong>
-        <?= e($order['ship_province']) ?>
-    </p>
-
-    <p>
-        <strong>ZIP:</strong>
-        <?= e($order['ship_zip']) ?>
-    </p>
-
-    <p>
-        <strong>Region:</strong>
-        <?= e($order['ship_region']) ?>
-    </p>
+    <p><strong>Name:</strong> <?= e($order['ship_name']) ?></p>
+    <p><strong>Phone:</strong> <?= e($order['ship_phone']) ?></p>
+    <p><strong>Address:</strong> <?= e($order['ship_address']) ?></p>
+    <p><strong>City:</strong> <?= e($order['ship_city']) ?></p>
+    <p><strong>Province:</strong> <?= e($order['ship_province']) ?></p>
+    <p><strong>ZIP:</strong> <?= e($order['ship_zip']) ?></p>
+    <p><strong>Region:</strong> <?= e($order['ship_region']) ?></p>
 
     <h2>Order Status</h2>
 
-    <form method="post">
+    <?php if ($order['order_status'] === 'cancelled'): ?>
+        <p>
+            This order is cancelled. Its stock has already been restored,
+            and the order cannot be reopened through this form.
+        </p>
+    <?php endif; ?>
 
+    <form method="post">
         <input
             type="hidden"
             name="order_id"
@@ -206,98 +260,67 @@ require __DIR__ . '/../includes/admin_header.php';
         >
 
         <div class="form-group">
-
             <label>
                 Payment Status
-
                 <select name="payment_status" required>
-
-                    <option
-                        value="pending"
-                        <?= $order['payment_status'] === 'pending' ? 'selected' : '' ?>
-                    >
+                    <option value="pending"
+                        <?= $order['payment_status'] === 'pending' ? 'selected' : '' ?>>
                         Pending
                     </option>
-
-                    <option
-                        value="paid"
-                        <?= $order['payment_status'] === 'paid' ? 'selected' : '' ?>
-                    >
+                    <option value="paid"
+                        <?= $order['payment_status'] === 'paid' ? 'selected' : '' ?>>
                         Paid
                     </option>
-
                 </select>
-
             </label>
-
         </div>
 
         <div class="form-group">
-
             <label>
                 Shipping Status
-
                 <select name="shipping_status" required>
-
-                    <option
-                        value="not_shipped"
-                        <?= $order['shipping_status'] === 'not_shipped' ? 'selected' : '' ?>
-                    >
+                    <option value="not_shipped"
+                        <?= $order['shipping_status'] === 'not_shipped' ? 'selected' : '' ?>>
                         Not Shipped
                     </option>
-
-                    <option
-                        value="shipped"
-                        <?= $order['shipping_status'] === 'shipped' ? 'selected' : '' ?>
-                    >
+                    <option value="shipped"
+                        <?= $order['shipping_status'] === 'shipped' ? 'selected' : '' ?>>
                         Shipped
                     </option>
-
-                    <option
-                        value="delivered"
-                        <?= $order['shipping_status'] === 'delivered' ? 'selected' : '' ?>
-                    >
+                    <option value="delivered"
+                        <?= $order['shipping_status'] === 'delivered' ? 'selected' : '' ?>>
                         Delivered
                     </option>
-
                 </select>
-
             </label>
-
         </div>
 
         <div class="form-group">
-
             <label>
                 Order Status
-
-                <select name="order_status" required>
-
-                    <option
-                        value="pending"
-                        <?= $order['order_status'] === 'pending' ? 'selected' : '' ?>
-                    >
+                <select
+                    name="order_status"
+                    required
+                    <?= $order['order_status'] === 'cancelled' ? 'disabled' : '' ?>
+                >
+                    <option value="pending"
+                        <?= $order['order_status'] === 'pending' ? 'selected' : '' ?>>
                         Pending
                     </option>
-
-                    <option
-                        value="completed"
-                        <?= $order['order_status'] === 'completed' ? 'selected' : '' ?>
-                    >
+                    <option value="completed"
+                        <?= $order['order_status'] === 'completed' ? 'selected' : '' ?>>
                         Completed
                     </option>
-
-                    <option
-                        value="cancelled"
-                        <?= $order['order_status'] === 'cancelled' ? 'selected' : '' ?>
-                    >
+                    <option value="cancelled"
+                        <?= $order['order_status'] === 'cancelled' ? 'selected' : '' ?>>
                         Cancelled
                     </option>
-
                 </select>
-
             </label>
 
+            <?php if ($order['order_status'] === 'cancelled'): ?>
+                <input type="hidden" name="order_status" value="cancelled">
+            <?php endif; ?>
         </div>
 
         <button
@@ -309,13 +332,9 @@ require __DIR__ . '/../includes/admin_header.php';
             Update Order
         </button>
 
-        <a
-            class="btn"
-            href="<?= BASE_URL ?>/admin/orders.php"
-        >
+        <a class="btn" href="<?= BASE_URL ?>/admin/orders.php">
             Back to Orders
         </a>
-
     </form>
 
 </section>

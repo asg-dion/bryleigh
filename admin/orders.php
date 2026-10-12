@@ -1,3 +1,4 @@
+
 <?php // OWNER: Member 2
 
 require __DIR__ . '/../includes/db.php';
@@ -6,7 +7,38 @@ require __DIR__ . '/../includes/auth.php';
 
 require_admin();
 
-$orderStmt = $pdo->query("
+$q = trim((string)($_GET['q'] ?? ''));
+$q = mb_substr($q, 0, 100);
+
+$allowedStatuses = ['all', 'pending', 'completed', 'cancelled'];
+$statusFilter = $_GET['status'] ?? 'all';
+
+if (!in_array($statusFilter, $allowedStatuses, true)) {
+    $statusFilter = 'all';
+}
+
+$where = [];
+$params = [];
+
+if ($q !== '') {
+    $where[] = "(
+        CAST(o.order_id AS CHAR) LIKE ?
+        OR u.full_name LIKE ?
+    )";
+
+    $search = '%' . $q . '%';
+    $params[] = $search;
+    $params[] = $search;
+}
+
+if ($statusFilter !== 'all') {
+    $where[] = 'o.order_status = ?';
+    $params[] = $statusFilter;
+}
+
+$whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+$orderStmt = $pdo->prepare("
     SELECT
         o.order_id,
         o.user_id,
@@ -23,9 +55,11 @@ $orderStmt = $pdo->query("
         u.email
     FROM orders o
     INNER JOIN users u ON u.user_id = o.user_id
+    $whereSql
     ORDER BY o.created_at DESC, o.order_id DESC
 ");
 
+$orderStmt->execute($params);
 $orders = $orderStmt->fetchAll();
 
 $itemStmt = $pdo->prepare("
@@ -45,9 +79,43 @@ require __DIR__ . '/../includes/admin_header.php';
 
 <h1>Order Management</h1>
 
+<form method="get" class="order-filters">
+    <input
+        type="search"
+        name="q"
+        value="<?= e($q) ?>"
+        placeholder="Search order number or customer name"
+        maxlength="100"
+    >
+
+    <select name="status">
+        <?php foreach ([
+            'all' => 'All statuses',
+            'pending' => 'Pending',
+            'completed' => 'Completed',
+            'cancelled' => 'Cancelled'
+        ] as $value => $label): ?>
+            <option
+                value="<?= e($value) ?>"
+                <?= $statusFilter === $value ? 'selected' : '' ?>
+            >
+                <?= e($label) ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+
+    <button class="btn btn-dark" type="submit">Search</button>
+
+    <a class="btn" href="<?= BASE_URL ?>/admin/orders.php">Clear</a>
+</form>
+
 <?php if (!$orders): ?>
 
-    <p>No orders have been placed yet.</p>
+    <p>
+        <?= ($q !== '' || $statusFilter !== 'all')
+            ? 'No orders match your search.'
+            : 'No orders have been placed yet.' ?>
+    </p>
 
 <?php else: ?>
 
@@ -56,23 +124,22 @@ require __DIR__ . '/../includes/admin_header.php';
         <section class="order-card">
 
             <div class="order-card-header">
-
                 <div>
                     <h2>Order #<?= (int)$order['order_id'] ?></h2>
-
                     <p>
-                        <?= e(date('F j, Y g:i A', strtotime($order['created_at']))) ?>
+                        <?= e(date(
+                            'F j, Y g:i A',
+                            strtotime($order['created_at'])
+                        )) ?>
                     </p>
                 </div>
 
                 <strong>
                     <?= format_price($order['total_amount']) ?>
                 </strong>
-
             </div>
 
             <div class="order-customer">
-
                 <h3>Customer</h3>
 
                 <p>
@@ -84,24 +151,34 @@ require __DIR__ . '/../includes/admin_header.php';
                     <strong>Email:</strong>
                     <?= e($order['email']) ?>
                 </p>
-
             </div>
 
             <div class="order-status">
-
                 <p>
                     <strong>Order Status:</strong>
-                    <?= e(ucwords(str_replace('_', ' ', $order['order_status']))) ?>
+                    <?= e(ucwords(str_replace(
+                        '_',
+                        ' ',
+                        $order['order_status']
+                    ))) ?>
                 </p>
 
                 <p>
                     <strong>Payment Status:</strong>
-                    <?= e(ucwords(str_replace('_', ' ', $order['payment_status']))) ?>
+                    <?= e(ucwords(str_replace(
+                        '_',
+                        ' ',
+                        $order['payment_status']
+                    ))) ?>
                 </p>
 
                 <p>
                     <strong>Shipping Status:</strong>
-                    <?= e(ucwords(str_replace('_', ' ', $order['shipping_status']))) ?>
+                    <?= e(ucwords(str_replace(
+                        '_',
+                        ' ',
+                        $order['shipping_status']
+                    ))) ?>
                 </p>
 
                 <p>
@@ -115,14 +192,11 @@ require __DIR__ . '/../includes/admin_header.php';
                 </p>
 
                 <?php if (!empty($order['payment_reference'])): ?>
-
                     <p>
                         <strong>Payment Reference:</strong>
                         <?= e($order['payment_reference']) ?>
                     </p>
-
                 <?php endif; ?>
-
             </div>
 
             <h3>Items</h3>
@@ -133,11 +207,8 @@ require __DIR__ . '/../includes/admin_header.php';
             ?>
 
             <?php if ($items): ?>
-
                 <div class="order-items">
-
                     <?php foreach ($items as $item): ?>
-
                         <?php
                         $quantity = (int)$item['quantity'];
                         $price = (float)$item['price_at_sale'];
@@ -145,10 +216,8 @@ require __DIR__ . '/../includes/admin_header.php';
                         ?>
 
                         <div class="order-item">
-
                             <div>
                                 <strong><?= e($item['title']) ?></strong>
-
                                 <p>
                                     <?= $quantity ?> ×
                                     <?= format_price($price) ?>
@@ -158,37 +227,32 @@ require __DIR__ . '/../includes/admin_header.php';
                             <strong>
                                 <?= format_price($subtotal) ?>
                             </strong>
-
                         </div>
-
                     <?php endforeach; ?>
-
                 </div>
-
             <?php else: ?>
-
                 <p>No items found for this order.</p>
-
             <?php endif; ?>
 
             <div class="order-shipping">
-
                 <h3>Shipping Information</h3>
-
                 <p>
                     <strong>Name:</strong>
                     <?= e($order['ship_name']) ?>
                 </p>
-
                 <p>
-                    <strong>Shipping Date:</strong>
-                    <?= e(date('F j, Y g:i A', strtotime($order['created_at']))) ?>
+                    <strong>Order Date:</strong>
+                    <?= e(date(
+                        'F j, Y g:i A',
+                        strtotime($order['created_at'])
+                    )) ?>
                 </p>
-
             </div>
 
-            <form method="post" action="<?= BASE_URL ?>/admin/order_update.php">
-
+            <form
+                method="post"
+                action="<?= BASE_URL ?>/admin/order_update.php"
+            >
                 <input
                     type="hidden"
                     name="order_id"
@@ -198,7 +262,6 @@ require __DIR__ . '/../includes/admin_header.php';
                 <button class="btn btn-dark" type="submit">
                     Manage Order
                 </button>
-
             </form>
 
         </section>

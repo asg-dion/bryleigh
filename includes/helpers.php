@@ -7,4 +7,3 @@ function flash_get(): ?array { $flash = $_SESSION['flash'] ?? null; unset($_SESS
 function format_price($n): string { return '₱' . number_format((float)$n, 2); }
 function cart_count(): int { return array_sum(array_map('intval', $_SESSION['cart'] ?? [])); }
 function product_image(?string $path): string { return $path ? BASE_URL . '/uploads/products/' . rawurlencode(basename($path)) : BASE_URL . '/assets/images/product-placeholder.svg'; }
-
