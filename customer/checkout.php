@@ -453,7 +453,8 @@ $page_title = 'Checkout';
 require __DIR__ . '/../includes/header.php';
 ?>
 
-<h1>Checkout</h1>
+<div class="checkout-page">
+    <h1>Checkout</h1>
 
 <?php
 if (
@@ -463,7 +464,7 @@ if (
 ?>
     <div class="flash success">
         <p><?= e($successMessage) ?></p>
-    </div>
+</div>
 <?php endif; ?>
 
 <?php if ($errors): ?>
@@ -475,159 +476,135 @@ if (
 <?php endif; ?>
 
 <?php if ($items): ?>
+    <div class="checkout-layout">
+        <div class="checkout-main">
+            <section class="address-book checkout-card">
+                <?php if ($addresses): ?>
+                    <form method="post" class="checkout-form" id="place-order-form">
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="<?= e($csrfToken) ?>"
+                        >
 
-    <section class="order-summary">
-        <h2>Order Summary</h2>
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="place_order"
+                        >
 
-        <?php foreach ($items as $item): ?>
-            <div class="order-item">
-                <div>
-                    <strong><?= e($item['title']) ?></strong>
+                        <div class="checkout-section">
+                            <h2>Customer Information</h2>
+                            <div class="form-group">
+                                <label for="address_id">Choose an address</label>
+
+                                <select name="address_id" id="address_id" required>
+                                    <option value="">Select a saved address</option>
+
+                                    <?php foreach ($addresses as $address): ?>
+                                        <?php
+                                        $addressText =
+                                            $address['address_label'] . ' — ' .
+                                            $address['recipient_name'] . ', ' .
+                                            $address['street_address'] . ', ' .
+                                            $address['city'] . ', ' .
+                                            $address['province'] . ' ' .
+                                            $address['zip_code'] . ', ' .
+                                            $address['region'] . ' (' .
+                                            $address['phone'] . ')';
+                                        ?>
+
+                                        <option
+                                            value="<?= (int)$address['address_id'] ?>"
+                                            <?= $selectedAddressId === (int)$address['address_id']
+                                                ? 'selected'
+                                                : '' ?>
+                                        >
+                                            <?= e($addressText) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="checkout-section">
+                            <h2>Delivery Information</h2>
+                            <h3>Delivery Option</h3>
+                            <div class="form-group">
+                                <label for="delivery_option">Delivery Option</label>
+
+                                <select
+                                    name="delivery_option"
+                                    id="delivery_option"
+                                    required
+                                >
+                                    <option value="">Select delivery option</option>
+
+                                    <?php foreach (['Standard', 'Express', 'Pick-up'] as $option): ?>
+                                        <option
+                                            value="<?= e($option) ?>"
+                                            <?= ($_POST['delivery_option'] ?? '') === $option
+                                                ? 'selected'
+                                                : '' ?>
+                                        >
+                                            <?= e($option) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="checkout-section">
+                            <h2>Payment Details</h2>
+                            <div class="form-group">
+                                <label for="payment_method">Payment Method</label>
+
+                                <select
+                                    name="payment_method"
+                                    id="payment_method"
+                                    required
+                                >
+                                    <option value="">Select payment method</option>
+
+                                    <?php foreach (['GCash', 'Cash on Delivery'] as $method): ?>
+                                        <option
+                                            value="<?= e($method) ?>"
+                                            <?= ($_POST['payment_method'] ?? '') === $method
+                                                ? 'selected'
+                                                : '' ?>
+                                        >
+                                            <?= e($method) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="payment_reference">Payment Reference</label>
+
+                                <input
+                                    type="text"
+                                    id="payment_reference"
+                                    name="payment_reference"
+                                    value="<?= e($_POST['payment_reference'] ?? '') ?>"
+                                    placeholder="Optional"
+                                >
+                            </div>
+                        </div>
+                    </form>
+                <?php else: ?>
+                    <h2>Customer Information</h2>
                     <p>
-                        <?= e($item['quantity']) ?> ×
-                        <?= format_price($item['price']) ?>
+                        You have no saved addresses yet.
+                        Add one below before placing your order.
                     </p>
-                </div>
+                <?php endif; ?>
+            </section>
 
-                <strong>
-                    <?= format_price($item['subtotal']) ?>
-                </strong>
-            </div>
-        <?php endforeach; ?>
+            <section class="add-address checkout-card">
+                <h2>Delivery Information: Add a New Address</h2>
 
-        <hr>
-
-        <p>
-            <strong>Total: <?= format_price($total) ?></strong>
-        </p>
-    </section>
-
-    <section class="address-book">
-        <h2>Saved Delivery Addresses</h2>
-
-        <?php if ($addresses): ?>
-            <form method="post" class="checkout-form">
-                <input
-                    type="hidden"
-                    name="csrf_token"
-                    value="<?= e($csrfToken) ?>"
-                >
-
-                <input
-                    type="hidden"
-                    name="action"
-                    value="place_order"
-                >
-
-                <div class="form-group">
-                    <label for="address_id">Choose an address</label>
-
-                    <select name="address_id" id="address_id" required>
-                        <option value="">Select a saved address</option>
-
-                        <?php foreach ($addresses as $address): ?>
-                            <?php
-                            $addressText =
-                                $address['address_label'] . ' — ' .
-                                $address['recipient_name'] . ', ' .
-                                $address['street_address'] . ', ' .
-                                $address['city'] . ', ' .
-                                $address['province'] . ' ' .
-                                $address['zip_code'] . ', ' .
-                                $address['region'] . ' (' .
-                                $address['phone'] . ')';
-                            ?>
-
-                            <option
-                                value="<?= (int)$address['address_id'] ?>"
-                                <?= $selectedAddressId === (int)$address['address_id']
-                                    ? 'selected'
-                                    : '' ?>
-                            >
-                                <?= e($addressText) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="delivery_option">Delivery Option</label>
-
-                    <select
-                        name="delivery_option"
-                        id="delivery_option"
-                        required
-                    >
-                        <option value="">Select delivery option</option>
-
-                        <?php foreach (['Standard', 'Express', 'Pick-up'] as $option): ?>
-                            <option
-                                value="<?= e($option) ?>"
-                                <?= ($_POST['delivery_option'] ?? '') === $option
-                                    ? 'selected'
-                                    : '' ?>
-                            >
-                                <?= e($option) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <h2>Payment</h2>
-
-                <div class="form-group">
-                    <label for="payment_method">Payment Method</label>
-
-                    <select
-                        name="payment_method"
-                        id="payment_method"
-                        required
-                    >
-                        <option value="">Select payment method</option>
-
-                        <?php foreach (['GCash', 'Cash on Delivery'] as $method): ?>
-                            <option
-                                value="<?= e($method) ?>"
-                                <?= ($_POST['payment_method'] ?? '') === $method
-                                    ? 'selected'
-                                    : '' ?>
-                            >
-                                <?= e($method) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="payment_reference">
-                        Payment Reference
-                    </label>
-
-                    <input
-                        type="text"
-                        id="payment_reference"
-                        name="payment_reference"
-                        value="<?= e($_POST['payment_reference'] ?? '') ?>"
-                        placeholder="Optional"
-                    >
-                </div>
-
-                <button class="btn btn-dark" type="submit">
-                    Place Order
-                </button>
-            </form>
-        <?php else: ?>
-            <p>
-                You have no saved addresses yet.
-                Add one below before placing your order.
-            </p>
-        <?php endif; ?>
-    </section>
-
-    <section class="add-address">
-        <h2>Add a New Address</h2>
-
-        <form method="post" class="checkout-form">
+                <form method="post" class="checkout-form">
             <input
                 type="hidden"
                 name="csrf_token"
@@ -748,23 +725,54 @@ if (
                 >
             </div>
 
-            <button class="btn btn-dark" type="submit">
-                Save Address
-            </button>
-        </form>
-    </section>
+                    <button class="btn btn-dark" type="submit">
+                        Save Address
+                    </button>
+                </form>
+            </section>
+        </div>
+
+        <aside class="order-summary checkout-summary">
+            <h2>Order Summary</h2>
+
+            <?php foreach ($items as $item): ?>
+                <div class="order-item">
+                    <div>
+                        <strong><?= e($item['title']) ?></strong>
+                        <p>
+                            <?= e($item['quantity']) ?> ×
+                            <?= format_price($item['price']) ?>
+                        </p>
+                    </div>
+
+                    <strong>
+                        <?= format_price($item['subtotal']) ?>
+                    </strong>
+                </div>
+            <?php endforeach; ?>
+
+            <div class="checkout-summary-total">
+                <span>Total</span>
+                <strong><?= format_price($total) ?></strong>
+            </div>
+
+            <?php if ($addresses): ?>
+                <button class="btn btn-dark checkout-place-order" type="submit" form="place-order-form">
+                    Place Order
+                </button>
+            <?php endif; ?>
+        </aside>
+    </div>
 
 <?php else: ?>
 
-    <p>Your cart is empty.</p>
-
-    <a
-        class="btn btn-dark"
-        href="<?= BASE_URL ?>/customer/shop.php"
-    >
-        Continue Shopping
-    </a>
+    <div class="checkout-empty">
+        <h2>Your cart is empty</h2>
+        <p class="muted">Add products to your cart before checking out.</p>
+        <a class="btn btn-dark" href="<?= BASE_URL ?>/customer/shop.php">Continue Shopping</a>
+    </div>
 
 <?php endif; ?>
+ </div>
 
 <?php require __DIR__ . '/../includes/footer.php'; ?>

@@ -68,100 +68,104 @@ $hasFilters = $q !== '' || $category || $cond !== '' || $inStock;
 $page_title = 'Products';
 require __DIR__ . '/../includes/header.php';
 ?>
-<div class="page-head">
-    <h1>Products</h1>
-    <span class="muted"><?= $total ?> item<?= $total === 1 ? '' : 's' ?><?= $q !== '' ? ' for “' . e($q) . '”' : '' ?></span>
-</div>
+<div class="shop-page">
+    <div class="page-head">
+        <h1>Products</h1>
+        <span class="muted"><?= $total ?> item<?= $total === 1 ? '' : 's' ?><?= $q !== '' ? ' for “' . e($q) . '”' : '' ?></span>
+    </div>
 
-<form class="filters" method="get" action="<?= BASE_URL ?>/customer/shop.php">
-    <div class="field" style="flex-basis:220px">
-        <label for="f-q">Search</label>
-        <input id="f-q" type="search" name="q" value="<?= e($q) ?>" placeholder="Title or description">
-    </div>
-    <div class="field">
-        <label for="f-cat">Category</label>
-        <select id="f-cat" name="category">
-            <option value="">All categories</option>
-            <?php foreach ($categories as $c): ?>
-                <option value="<?= (int)$c['category_id'] ?>" <?= $category === (int)$c['category_id'] ? 'selected' : '' ?>><?= e($c['category_name']) ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <div class="field">
-        <label for="f-cond">Condition</label>
-        <select id="f-cond" name="condition">
-            <option value="">Any condition</option>
-            <?php foreach ($conditions as $c): ?>
-                <option value="<?= e($c) ?>" <?= $cond === $c ? 'selected' : '' ?>><?= e($c) ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <div class="field">
-        <label for="f-sort">Sort by</label>
-        <select id="f-sort" name="sort">
-            <?php foreach ($sorts as $key => [$label]): ?>
-                <option value="<?= e($key) ?>" <?= $sort === $key ? 'selected' : '' ?>><?= e($label) ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <div class="field" style="flex:0 0 auto">
-        <label style="display:flex;gap:.4rem;align-items:center;font-weight:normal">
-            <input type="checkbox" name="in_stock" value="1" <?= $inStock ? 'checked' : '' ?> style="width:auto;margin:0"> In stock only
-        </label>
-    </div>
-    <div class="actions">
-        <button class="btn btn-dark" type="submit">Apply</button>
-        <a class="btn" href="<?= BASE_URL ?>/customer/shop.php">Reset</a>
-    </div>
-</form>
+    <form class="filter-bar" method="get" action="<?= BASE_URL ?>/customer/shop.php">
+        <div class="filter-field search-field">
+            <label for="f-q">Search</label>
+            <input id="f-q" type="search" name="q" value="<?= e($q) ?>" placeholder="Title or description">
+        </div>
+        <div class="filter-field">
+            <label for="f-cat">Category</label>
+            <select id="f-cat" name="category">
+                <option value="">All categories</option>
+                <?php foreach ($categories as $c): ?>
+                    <option value="<?= (int)$c['category_id'] ?>" <?= $category === (int)$c['category_id'] ? 'selected' : '' ?>><?= e($c['category_name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="f-cond">Condition</label>
+            <select id="f-cond" name="condition">
+                <option value="">Any condition</option>
+                <?php foreach ($conditions as $c): ?>
+                    <option value="<?= e($c) ?>" <?= $cond === $c ? 'selected' : '' ?>><?= e($c) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="f-sort">Sort by</label>
+            <select id="f-sort" name="sort">
+                <?php foreach ($sorts as $key => [$label]): ?>
+                    <option value="<?= e($key) ?>" <?= $sort === $key ? 'selected' : '' ?>><?= e($label) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="filter-tools">
+            <div class="filter-field stock-field">
+                <label for="f-stock"><input id="f-stock" type="checkbox" name="in_stock" value="1" <?= $inStock ? 'checked' : '' ?>> In stock only</label>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-dark" type="submit">Apply</button>
+                <a class="btn btn-outline" href="<?= BASE_URL ?>/customer/shop.php">Reset</a>
+            </div>
+        </div>
+    </form>
 
-<?php if (!$products): ?>
-    <div class="empty-state">
-        <?php if ($hasFilters): ?>
-            <p><strong>No products match your <?= $q !== '' ? 'search' : 'filters' ?>.</strong></p>
-            <p class="muted">
-                <?php if ($q !== ''): ?>Nothing found for “<?= e($q) ?>”. <?php endif; ?>
-                Try different keywords or clear your filters.
-            </p>
-            <a class="btn btn-dark" href="<?= BASE_URL ?>/customer/shop.php">Clear search &amp; filters</a>
-        <?php else: ?>
-            <p><strong>No products are available right now.</strong></p>
-            <p class="muted">Please check back soon for new arrivals.</p>
-            <a class="btn btn-dark" href="<?= BASE_URL ?>/index.php">Back to home</a>
-        <?php endif; ?>
-    </div>
-<?php else: ?>
-    <div class="product-grid">
-        <?php foreach ($products as $p): $soldOut = (int)$p['stock'] <= 0; ?>
-            <article class="product-card<?= $soldOut ? ' sold-out' : '' ?>">
-                <a href="<?= BASE_URL ?>/customer/product.php?id=<?= (int)$p['product_id'] ?>">
+    <?php if (!$products): ?>
+        <div class="empty-state">
+            <?php if ($hasFilters): ?>
+                <p><strong>No products match your <?= $q !== '' ? 'search' : 'filters' ?>.</strong></p>
+                <p class="muted">
+                    <?php if ($q !== ''): ?>Nothing found for “<?= e($q) ?>”. <?php endif; ?>
+                    Try different keywords or clear your filters.
+                </p>
+                <a class="btn btn-dark" href="<?= BASE_URL ?>/customer/shop.php">Clear search &amp; filters</a>
+            <?php else: ?>
+                <p><strong>No products are available right now.</strong></p>
+                <p class="muted">Please check back soon for new arrivals.</p>
+                <a class="btn btn-dark" href="<?= BASE_URL ?>/index.php">Back to home</a>
+            <?php endif; ?>
+        </div>
+    <?php else: ?>
+        <div class="product-grid">
+            <?php foreach ($products as $p): $soldOut = (int)$p['stock'] <= 0; ?>
+                <article class="product-card<?= $soldOut ? ' sold-out' : '' ?>">
                     <div class="thumb">
-                        <img src="<?= e(product_image($p['image_path'])) ?>" alt="<?= e($p['title']) ?>" loading="lazy">
+                        <a class="product-image-link" href="<?= BASE_URL ?>/customer/product.php?id=<?= (int)$p['product_id'] ?>">
+                            <img src="<?= e(product_image($p['image_path'])) ?>" alt="<?= e($p['title']) ?>" loading="lazy">
+                        </a>
+                        <a class="quick-view" href="<?= BASE_URL ?>/customer/product.php?id=<?= (int)$p['product_id'] ?>">Quick view</a>
                         <?php if ($soldOut): ?>
-                            <span class="badge badge-out">Sold out</span>
+                            <span class="badge badge-out stock-badge">Sold out</span>
                         <?php elseif ((int)$p['stock'] <= 2): ?>
-                            <span class="badge badge-warn">Only <?= (int)$p['stock'] ?> left</span>
+                            <span class="badge badge-warn stock-badge">Only <?= (int)$p['stock'] ?> left</span>
                         <?php endif; ?>
                     </div>
-                    <div class="info">
-                        <span class="title"><?= e($p['title']) ?></span>
-                        <span class="meta"><?= e($p['category_name']) ?> · <?= e($p['item_condition']) ?></span>
-                        <span class="price"><?= e(format_price($p['price'])) ?></span>
-                    </div>
-                </a>
-            </article>
-        <?php endforeach; ?>
-    </div>
+                <div class="info">
+                    <span class="category-label"><?= e($p['category_name']) ?></span>
+                    <span class="title"><?= e($p['title']) ?></span>
+                    <span class="price"><?= e(format_price($p['price'])) ?></span>
+                    <span class="condition-label"><?= e($p['item_condition']) ?></span>
+                </div>
+                </article>
+            <?php endforeach; ?>
+        </div>
 
-    <?php if ($totalPages > 1): ?>
-        <nav class="pagination" aria-label="Pagination">
-            <?php if ($page > 1): ?><a href="<?= e($pageUrl($page - 1)) ?>">&laquo; Prev</a><?php endif; ?>
-            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                <?php if ($i === $page): ?><span class="current"><?= $i ?></span>
-                <?php else: ?><a href="<?= e($pageUrl($i)) ?>"><?= $i ?></a><?php endif; ?>
-            <?php endfor; ?>
-            <?php if ($page < $totalPages): ?><a href="<?= e($pageUrl($page + 1)) ?>">Next &raquo;</a><?php endif; ?>
-        </nav>
+        <?php if ($totalPages > 1): ?>
+            <nav class="pagination" aria-label="Pagination">
+                <?php if ($page > 1): ?><a href="<?= e($pageUrl($page - 1)) ?>">&laquo; Prev</a><?php endif; ?>
+                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                    <?php if ($i === $page): ?><span class="current"><?= $i ?></span>
+                    <?php else: ?><a href="<?= e($pageUrl($i)) ?>"><?= $i ?></a><?php endif; ?>
+                <?php endfor; ?>
+                <?php if ($page < $totalPages): ?><a href="<?= e($pageUrl($page + 1)) ?>">Next &raquo;</a><?php endif; ?>
+            </nav>
+        <?php endif; ?>
     <?php endif; ?>
-<?php endif; ?>
+</div>
 <?php require __DIR__ . '/../includes/footer.php';

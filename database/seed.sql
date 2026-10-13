@@ -10,4 +10,30 @@ INSERT INTO products (category_id,title,description,price,item_condition,stock,i
 INSERT INTO products (category_id,title,description,price,item_condition,stock,image_path,status) SELECT category_id,'Canvas Tote','Sturdy reusable canvas tote.',350.00,'Good',6,NULL,'active' FROM categories WHERE category_name='Bags' AND NOT EXISTS (SELECT 1 FROM products WHERE title='Canvas Tote');
 INSERT INTO products (category_id,title,description,price,item_condition,stock,image_path,status) SELECT category_id,'Ribbed Crop Top','Minimal ribbed cotton crop top.',300.00,'Like New',3,NULL,'active' FROM categories WHERE category_name='Tops' AND NOT EXISTS (SELECT 1 FROM products WHERE title='Ribbed Crop Top');
 INSERT INTO products (category_id,title,description,price,item_condition,stock,image_path,status) SELECT category_id,'Pleated Midi Skirt','Flowy pleated midi skirt.',575.00,'Good',2,NULL,'active' FROM categories WHERE category_name='Dresses' AND NOT EXISTS (SELECT 1 FROM products WHERE title='Pleated Midi Skirt');
-
+UPDATE products
+SET image_path = CASE title
+    WHEN 'Pleated Midi Skirt' THEN 'pleated-midi-skirt.jpg'
+    WHEN 'Ribbed Crop Top' THEN 'ribbed-crop-top.jpg'
+    WHEN 'Canvas Tote' THEN 'canvas-tote.jpg'
+    WHEN 'Denim Shorts' THEN 'denim-shorts.jpg'
+    WHEN 'Plaid Blazer' THEN 'plaid-blazer.jpg'
+    WHEN 'Knit Cardigan' THEN 'knit-cardigan.jpg'
+    WHEN 'Preloved Sneakers' THEN 'preloved-sneakers.jpg'
+    WHEN 'Leather Crossbody Bag' THEN 'leather-crossbody-bag.jpg'
+    WHEN 'Floral Summer Dress' THEN 'floral-summer-dress.jpg'
+    WHEN 'Vintage Denim Jacket' THEN 'vintage-denim-jacket.jpg'
+    ELSE image_path
+END
+WHERE title IN (
+    'Pleated Midi Skirt',
+    'Ribbed Crop Top',
+    'Canvas Tote',
+    'Denim Shorts',
+    'Plaid Blazer',
+    'Knit Cardigan',
+    'Preloved Sneakers',
+    'Leather Crossbody Bag',
+    'Floral Summer Dress',
+    'Vintage Denim Jacket'
+)
+AND image_path IS NULL;

@@ -37,26 +37,28 @@ require __DIR__ . '/../includes/admin_header.php';
 ?>
 <div class="page-head">
     <h1>Product Management</h1>
-    <a class="btn btn-dark" href="<?= BASE_URL ?>/admin/product_form.php">+ Add product</a>
 </div>
 
-<div class="toolbar">
-    <div class="tabs">
-        <?php foreach (['active' => 'Active', 'archived' => 'Archived', 'all' => 'All'] as $key => $label): ?>
-            <a href="<?= e($tabUrl($key)) ?>" class="<?= $statusFilter === $key ? 'active' : '' ?>"><?= e($label) ?></a>
-        <?php endforeach; ?>
+<div class="admin-products-toolbar">
+    <div class="admin-products-toolbar-top">
+        <nav class="tabs admin-status-tabs" aria-label="Product status filter">
+            <?php foreach (['active' => 'Active', 'archived' => 'Archived', 'all' => 'All'] as $key => $label): ?>
+                <a href="<?= e($tabUrl($key)) ?>" class="<?= $statusFilter === $key ? 'active' : '' ?>"><?= e($label) ?></a>
+            <?php endforeach; ?>
+        </nav>
+        <a class="btn btn-dark" href="<?= BASE_URL ?>/admin/product_form.php">+ Add product</a>
     </div>
-    <form method="get">
+    <form class="admin-product-search" method="get">
         <input type="hidden" name="status" value="<?= e($statusFilter) ?>">
         <input type="search" name="q" value="<?= e($q) ?>" placeholder="Search title or category">
-        <button class="btn btn-dark btn-sm" type="submit">Search</button>
+        <button class="btn btn-dark" type="submit">Search</button>
     </form>
 </div>
 
-<div class="table-wrap">
-<table class="table">
+<div class="table-wrap admin-table-wrap">
+<table class="table admin-table admin-products-table">
     <thead>
-        <tr><th></th><th>Title</th><th>Category</th><th>Price</th><th>Condition</th><th>Stock</th><th>Status</th><th>Actions</th></tr>
+        <tr><th>Image</th><th>Title</th><th>Category</th><th>Condition</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr>
     </thead>
     <tbody>
     <?php if (!$products): ?>
@@ -67,10 +69,10 @@ require __DIR__ . '/../includes/admin_header.php';
             <td><img class="admin-thumb" src="<?= e(product_image($p['image_path'])) ?>" alt=""></td>
             <td><strong><?= e($p['title']) ?></strong></td>
             <td><?= e($p['category_name']) ?></td>
-            <td><?= e(format_price($p['price'])) ?></td>
             <td><?= e($p['item_condition']) ?></td>
-            <td><span class="badge <?= $stock === 0 ? 'badge-out' : ($stock <= 2 ? 'badge-warn' : '') ?>"><?= $stock ?></span></td>
-            <td><span class="badge <?= $p['status'] === 'active' ? 'badge-ok' : 'badge-archived' ?>"><?= e(ucfirst($p['status'])) ?></span></td>
+            <td><?= e(format_price($p['price'])) ?></td>
+            <td><span class="order-status-badge <?= $stock === 0 ? 'badge-cancelled' : ($stock <= 2 ? 'badge-pending' : 'badge-completed') ?>"><?= $stock ?></span></td>
+            <td><span class="order-status-badge <?= $p['status'] === 'active' ? 'badge-completed' : 'badge-processing' ?>"><?= e(ucfirst($p['status'])) ?></span></td>
             <td>
                 <div class="row-actions">
                     <a class="btn btn-sm" href="<?= BASE_URL ?>/admin/product_form.php?id=<?= (int)$p['product_id'] ?>">Edit</a>
@@ -79,7 +81,7 @@ require __DIR__ . '/../includes/admin_header.php';
                               onsubmit="return confirm('Archive “<?= e(addslashes($p['title'])) ?>”? It will no longer appear in the shop.');">
                             <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
                             <input type="hidden" name="product_id" value="<?= (int)$p['product_id'] ?>">
-                            <button class="btn btn-sm btn-danger" type="submit">Archive</button>
+                            <button class="btn btn-sm btn-danger-outline" type="submit">Archive</button>
                         </form>
                     <?php endif; ?>
                 </div>

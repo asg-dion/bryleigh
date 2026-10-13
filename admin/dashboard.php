@@ -47,31 +47,31 @@ require __DIR__ . '/../includes/admin_header.php';
 </div>
 
 <div class="stat-grid">
-    <a class="stat-card" href="<?= BASE_URL ?>/admin/products.php?status=active">
-        <span class="stat-label">Active products</span>
+    <a class="stat-card stat-card-active" href="<?= BASE_URL ?>/admin/products.php?status=active">
+        <span class="stat-label"><span class="stat-indicator" aria-hidden="true"></span>Active products</span>
         <span class="stat-num"><?= $activeProducts ?></span>
     </a>
-    <a class="stat-card<?= $lowStock > 0 ? ' warn' : '' ?>" href="<?= BASE_URL ?>/admin/products.php?status=active">
-        <span class="stat-label">Low stock (1&ndash;<?= LOW_STOCK_THRESHOLD ?> left)</span>
+    <a class="stat-card stat-card-low<?= $lowStock > 0 ? ' warn' : '' ?>" href="<?= BASE_URL ?>/admin/products.php?status=active">
+        <span class="stat-label"><span class="stat-indicator" aria-hidden="true"></span>Low stock (1&ndash;<?= LOW_STOCK_THRESHOLD ?> left)</span>
         <span class="stat-num"><?= $lowStock ?></span>
     </a>
-    <a class="stat-card<?= $outOfStock > 0 ? ' danger' : '' ?>" href="<?= BASE_URL ?>/admin/products.php?status=active">
-        <span class="stat-label">Out of stock</span>
+    <a class="stat-card stat-card-out<?= $outOfStock > 0 ? ' danger' : '' ?>" href="<?= BASE_URL ?>/admin/products.php?status=active">
+        <span class="stat-label"><span class="stat-indicator" aria-hidden="true"></span>Out of stock</span>
         <span class="stat-num"><?= $outOfStock ?></span>
     </a>
-    <a class="stat-card<?= $pendingOrders > 0 ? ' warn' : '' ?>" href="<?= BASE_URL ?>/admin/orders.php">
-        <span class="stat-label">Pending orders</span>
+    <a class="stat-card stat-card-pending<?= $pendingOrders > 0 ? ' warn' : '' ?>" href="<?= BASE_URL ?>/admin/orders.php">
+        <span class="stat-label"><span class="stat-indicator" aria-hidden="true"></span>Pending orders</span>
         <span class="stat-num"><?= $pendingOrders ?></span>
     </a>
 </div>
 
-<div class="page-head" style="margin-top:2rem">
-    <h2 style="margin:0">Recent orders</h2>
-    <a class="btn btn-sm" href="<?= BASE_URL ?>/admin/orders.php">View all orders</a>
+<div class="page-head recent-orders-head">
+    <h2>Recent orders</h2>
+    <a class="btn btn-outline btn-sm" href="<?= BASE_URL ?>/admin/orders.php">View all orders</a>
 </div>
 
-<div class="table-wrap">
-<table class="table">
+<div class="table-wrap admin-table-wrap">
+<table class="table admin-table">
     <thead>
         <tr><th>Order</th><th>Customer</th><th>Date</th><th>Total</th><th>Order status</th><th>Payment</th><th>Shipping</th></tr>
     </thead>
@@ -85,9 +85,9 @@ require __DIR__ . '/../includes/admin_header.php';
             <td><?= e($o['full_name']) ?></td>
             <td><?= e(date('M j, Y g:i A', strtotime($o['created_at']))) ?></td>
             <td><?= e(format_price($o['total_amount'])) ?></td>
-            <td><span class="badge <?= $o['order_status'] === 'pending' ? 'badge-warn' : ($o['order_status'] === 'cancelled' ? 'badge-out' : 'badge-ok') ?>"><?= e($label($o['order_status'])) ?></span></td>
-            <td><?= e($label($o['payment_status'])) ?></td>
-            <td><?= e($label($o['shipping_status'])) ?></td>
+            <td><span class="order-status-badge badge-<?= e(str_replace('_', '-', $o['order_status'])) ?>"><?= e($label($o['order_status'])) ?></span></td>
+            <td><span class="order-status-badge badge-<?= e(str_replace('_', '-', $o['payment_status'])) ?>"><?= e($label($o['payment_status'])) ?></span></td>
+            <td><span class="order-status-badge badge-<?= e(str_replace('_', '-', $o['shipping_status'])) ?>"><?= e($label($o['shipping_status'])) ?></span></td>
         </tr>
     <?php endforeach; ?>
     </tbody>

@@ -11,5 +11,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) { $check = $pdo->prepare('SELECT user_id FROM users WHERE email = ?'); $check->execute([$email]); if ($check->fetch()) $errors[] = 'That email is already registered.'; }
     if (!$errors) { $stmt = $pdo->prepare("INSERT INTO users (full_name,email,password_hash,role) VALUES (?,?,?,'customer')"); $stmt->execute([$name, $email, password_hash($password, PASSWORD_DEFAULT)]); session_regenerate_id(true); $_SESSION['user_id'] = (int)$pdo->lastInsertId(); $_SESSION['role'] = 'customer'; $_SESSION['full_name'] = $name; $_SESSION['cart'] ??= []; flash_set('success', 'Welcome to Bryleigh!'); redirect('index.php'); }
 }
-?><div class="auth-card"><h1>Register</h1><?php foreach ($errors as $error): ?><p class="error"><?= e($error) ?></p><?php endforeach; ?><form method="post"><div class="form-group"><label>Full name<input name="full_name" required value="<?= e($_POST['full_name'] ?? '') ?>"></label></div><div class="form-group"><label>Email<input type="email" name="email" required value="<?= e($_POST['email'] ?? '') ?>"></label></div><div class="form-group"><label>Password<input type="password" name="password" required></label></div><div class="form-group"><label>Confirm password<input type="password" name="confirm_password" required></label></div><button class="btn btn-dark">Create account</button></form></div><?php require __DIR__ . '/../includes/footer.php';
-
+?>
+<div class="auth-card auth-page">
+    <div class="tabs auth-tabs">
+        <a href="<?= BASE_URL ?>/customer/login.php">Login</a>
+        <a class="active" href="<?= BASE_URL ?>/customer/register.php">Register</a>
+    </div>
+    <h1>Register</h1>
+    <?php foreach ($errors as $error): ?><p class="error"><?= e($error) ?></p><?php endforeach; ?>
+    <form method="post">
+        <div class="form-group">
+            <label>Full name<input name="full_name" required value="<?= e($_POST['full_name'] ?? '') ?>"></label>
+        </div>
+        <div class="form-group">
+            <label>Email<input type="email" name="email" required value="<?= e($_POST['email'] ?? '') ?>"></label>
+        </div>
+        <div class="form-group">
+            <label>Password<input type="password" name="password" required></label>
+        </div>
+        <div class="form-group">
+            <label>Confirm password<input type="password" name="confirm_password" required></label>
+        </div>
+        <button class="btn btn-dark">Create account</button>
+    </form>
+</div>
+<?php require __DIR__ . '/../includes/footer.php';

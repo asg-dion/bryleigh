@@ -1,6 +1,15 @@
 config/db.local.php
 uploads/products/*
 !uploads/products/.gitkeep
+!uploads/products/pleated-midi-skirt.jpg
+!uploads/products/ribbed-crop-top.jpg
+!uploads/products/canvas-tote.jpg
+!uploads/products/denim-shorts.jpg
+!uploads/products/plaid-blazer.jpg
+!uploads/products/knit-cardigan.jpg
+!uploads/products/preloved-sneakers.jpg
+!uploads/products/leather-crossbody-bag.jpg
+!uploads/products/floral-summer-dress.jpg
+!uploads/products/vintage-denim-jacket.jpg
 .DS_Store
 .vscode/
-

@@ -230,231 +230,184 @@ $page_title = 'Order History';
 require __DIR__ . '/../includes/header.php';
 ?>
 
-<h1>Order History</h1>
+<section class="container order-history-page">
+    <h1 class="order-history-title">Order History</h1>
 
-<?php if (!$orders): ?>
+    <?php if (!$orders): ?>
+        <div class="order-empty-state">
+            <span class="order-empty-icon" aria-hidden="true">♡</span>
+            <h2>No orders yet</h2>
+            <p>Your next favorite find is waiting to be discovered.</p>
+            <a class="btn btn-dark" href="<?= BASE_URL ?>/customer/shop.php">
+                Start shopping
+            </a>
+        </div>
+    <?php else: ?>
+        <?php foreach ($orders as $order): ?>
+            <article class="order-card">
+                <header class="order-header">
+                    <div>
+                        <h2>Order #<?= (int) $order['order_id'] ?></h2>
+                        <p>
+                            <?= e(date(
+                                'F j, Y g:i A',
+                                strtotime($order['created_at'])
+                            )) ?>
+                        </p>
+                    </div>
+                    <strong><?= format_price($order['total_amount']) ?></strong>
+                </header>
 
-    <p>You have no orders yet.</p>
-
-    <a class="btn btn-dark" href="<?= BASE_URL ?>/customer/shop.php">
-        Continue Shopping
-    </a>
-
-<?php else: ?>
-
-    <?php foreach ($orders as $order): ?>
-
-        <section class="order-card">
-
-            <div class="order-card-header">
-                <div>
-                    <h2>Order #<?= (int) $order['order_id'] ?></h2>
-
-                    <p>
-                        <?= e(date(
-                            'F j, Y g:i A',
-                            strtotime($order['created_at'])
-                        )) ?>
-                    </p>
-                </div>
-
-                <strong>
-                    <?= format_price($order['total_amount']) ?>
-                </strong>
-            </div>
-
-            <div class="order-status">
-
-                <p>
-                    <strong>Order Status:</strong>
-                    <?= e(ucwords(str_replace(
-                        '_',
-                        ' ',
-                        $order['order_status']
-                    ))) ?>
-                </p>
-
-                <p>
-                    <strong>Payment Status:</strong>
-                    <?= e(ucwords(str_replace(
-                        '_',
-                        ' ',
-                        $order['payment_status']
-                    ))) ?>
-                </p>
-
-                <p>
-                    <strong>Shipping Status:</strong>
-                    <?= e(ucwords(str_replace(
-                        '_',
-                        ' ',
-                        $order['shipping_status']
-                    ))) ?>
-                </p>
-
-                <p>
-                    <strong>Delivery:</strong>
-                    <?= e($order['delivery_option']) ?>
-                </p>
-
-                <p>
-                    <strong>Payment Method:</strong>
-                    <?= e($order['payment_method']) ?>
-                </p>
-
-                <?php if (
-                    $order['order_status'] === 'cancelled'
-                    && !empty($order['cancellation_reason'])
-                ): ?>
-                    <p>
-                        <strong>Cancellation Reason:</strong><br>
-                        <?= nl2br(e($order['cancellation_reason'])) ?>
-                    </p>
-                <?php endif; ?>
-
-                <?php if ($order['order_status'] === 'pending'): ?>
-
-                    <form
-                        method="POST"
-                        action="<?= BASE_URL ?>/customer/order_history.php"
-                        onsubmit="return confirm('Are you sure you want to cancel this order?');"
-                        class="cancel-order-form"
-                    >
-                        <input
-                            type="hidden"
-                            name="order_id"
-                            value="<?= (int) $order['order_id'] ?>"
-                        >
-
-                        <input
-                            type="hidden"
-                            name="csrf_token"
-                            value="<?= e($_SESSION['csrf_token']) ?>"
-                        >
-
-                        <div class="form-group">
-                            <label
-                                for="cancellation_reason_<?= (int) $order['order_id'] ?>"
-                            >
-                                Why do you want to cancel this order?
-                            </label>
-
-                            <textarea
-                                id="cancellation_reason_<?= (int) $order['order_id'] ?>"
-                                name="cancellation_reason"
-                                rows="3"
-                                minlength="10"
-                                maxlength="500"
-                                required
-                                placeholder="Explain your reason (10–500 characters)."
-                            ></textarea>
-                        </div>
-
-                        <button
-                            type="submit"
-                            name="cancel_order"
-                            value="1"
-                            class="cancel-order-btn"
-                        >
-                            Cancel Order
-                        </button>
-                    </form>
-
-                <?php endif; ?>
-
-            </div>
-
-            <h3>Items</h3>
-
-            <?php
-            $itemStmt->execute([(int) $order['order_id']]);
-            $items = $itemStmt->fetchAll();
-            ?>
-
-            <?php if ($items): ?>
-
-                <div class="order-items">
-
-                    <?php foreach ($items as $item): ?>
-
+                <div class="order-body">
+                    <section class="order-items-column">
+                        <h3>Items</h3>
                         <?php
-                        $quantity = (int) $item['quantity'];
-                        $price = (float) $item['price_at_sale'];
-                        $subtotal = $quantity * $price;
+                        $itemStmt->execute([(int) $order['order_id']]);
+                        $items = $itemStmt->fetchAll();
                         ?>
 
-                        <div class="order-item">
-
-                            <div>
-                                <strong><?= e($item['title']) ?></strong>
-
-                                <p>
-                                    <?= $quantity ?> ×
-                                    <?= format_price($price) ?>
-                                </p>
+                        <?php if ($items): ?>
+                            <div class="order-items">
+                                <div class="order-item-list">
+                                    <?php foreach ($items as $item): ?>
+                                        <?php
+                                        $quantity = (int) $item['quantity'];
+                                        $price = (float) $item['price_at_sale'];
+                                        $subtotal = $quantity * $price;
+                                        ?>
+                                        <div class="order-item">
+                                            <span class="order-item-thumbnail" aria-hidden="true">
+                                                <svg viewBox="0 0 48 48">
+                                                    <path d="m16 10-9 5 4 9 5-2v17h16V22l5 2 4-9-9-5-4 5h-8l-4-5Z"></path>
+                                                    <path d="m17 10 3 5h8l3-5"></path>
+                                                </svg>
+                                            </span>
+                                            <div class="order-item-info">
+                                                <strong><?= e($item['title']) ?></strong>
+                                                <p><?= $quantity ?> × <?= format_price($price) ?></p>
+                                            </div>
+                                            <strong class="order-item-total">
+                                                <?= format_price($subtotal) ?>
+                                            </strong>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <div class="order-total">
+                                    <span>Order total</span>
+                                    <strong><?= format_price($order['total_amount']) ?></strong>
+                                </div>
                             </div>
+                        <?php else: ?>
+                            <p>No items found for this order.</p>
+                        <?php endif; ?>
+                    </section>
 
-                            <strong>
-                                <?= format_price($subtotal) ?>
-                            </strong>
-
+                    <section class="order-details-column">
+                        <h3>Order Details</h3>
+                        <div class="order-statuses" aria-label="Order statuses">
+                            <span class="order-status-badge badge-<?= e($order['order_status']) ?>">
+                                <span class="status-label">Order</span>
+                                <span><?= e(ucwords(str_replace('_', ' ', $order['order_status']))) ?></span>
+                            </span>
+                            <span class="order-status-badge badge-<?= e($order['payment_status']) ?>">
+                                <span class="status-label">Payment</span>
+                                <span><?= e(ucwords(str_replace('_', ' ', $order['payment_status']))) ?></span>
+                            </span>
+                            <span class="order-status-badge badge-<?= $order['shipping_status'] === 'not_shipped' ? 'pending' : e($order['shipping_status']) ?>">
+                                <span class="status-label">Shipping</span>
+                                <span><?= e(ucwords(str_replace('_', ' ', $order['shipping_status']))) ?></span>
+                            </span>
                         </div>
 
-                    <?php endforeach; ?>
+                        <div class="order-meta">
+                            <div>
+                                <span class="meta-label">Delivery</span>
+                                <span class="meta-value"><?= e($order['delivery_option']) ?></span>
+                            </div>
+                            <div>
+                                <span class="meta-label">Payment Method</span>
+                                <span class="meta-value"><?= e($order['payment_method']) ?></span>
+                            </div>
+                        </div>
 
+                        <?php if (
+                            $order['order_status'] === 'cancelled'
+                            && !empty($order['cancellation_reason'])
+                        ): ?>
+                            <p class="cancellation-reason">
+                                <strong>Cancellation Reason:</strong><br>
+                                <?= nl2br(e($order['cancellation_reason'])) ?>
+                            </p>
+                        <?php endif; ?>
+
+                        <h3 class="shipping-heading">Shipping to</h3>
+                        <div class="shipping-info">
+                            <p class="shipping-recipient">
+                                <strong><?= e($order['ship_name']) ?></strong>
+                                <span><?= e($order['ship_phone']) ?></span>
+                            </p>
+                            <p class="shipping-address">
+                                <?= e($order['ship_address']) ?>,
+                                <?= e($order['ship_city']) ?>,
+                                <?= e($order['ship_province']) ?>
+                                <?= e($order['ship_zip']) ?>,
+                                <?= e($order['ship_region']) ?>
+                            </p>
+                        </div>
+                    </section>
                 </div>
 
-            <?php else: ?>
-
-                <p>No items found for this order.</p>
-
-            <?php endif; ?>
-
-            <h3>Shipping Information</h3>
-
-            <div class="shipping-info">
-
-                <p>
-                    <strong>Name:</strong>
-                    <?= e($order['ship_name']) ?>
-                </p>
-
-                <p>
-                    <strong>Phone:</strong>
-                    <?= e($order['ship_phone']) ?>
-                </p>
-
-                <p>
-                    <strong>Address:</strong>
-                    <?= e($order['ship_address']) ?>
-                </p>
-
-                <p>
-                    <strong>City:</strong>
-                    <?= e($order['ship_city']) ?>
-                </p>
-
-                <p>
-                    <strong>Province:</strong>
-                    <?= e($order['ship_province']) ?>
-                </p>
-
-                <p>
-                    <strong>ZIP:</strong>
-                    <?= e($order['ship_zip']) ?>
-                </p>
-
-                <p>
-                    <strong>Region:</strong>
-                    <?= e($order['ship_region']) ?>
-                </p>
-
-            </div>
-
-        </section>
-
-    <?php endforeach; ?>
-
-<?php endif; ?>
+                <?php if ($order['order_status'] === 'pending'): ?>
+                    <footer class="order-footer">
+                        <details class="cancel-order-details">
+                            <summary class="cancel-order-summary">Cancel order</summary>
+                            <form
+                                method="POST"
+                                action="<?= BASE_URL ?>/customer/order_history.php"
+                                onsubmit="return confirm('Are you sure you want to cancel this order?');"
+                                class="cancel-order-form"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="order_id"
+                                    value="<?= (int) $order['order_id'] ?>"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="<?= e($_SESSION['csrf_token']) ?>"
+                                >
+                                <div class="form-group">
+                                    <label
+                                        for="cancellation_reason_<?= (int) $order['order_id'] ?>"
+                                    >
+                                        Why do you want to cancel this order?
+                                    </label>
+                                    <textarea
+                                        id="cancellation_reason_<?= (int) $order['order_id'] ?>"
+                                        name="cancellation_reason"
+                                        rows="3"
+                                        minlength="10"
+                                        maxlength="500"
+                                        required
+                                        placeholder="Explain your reason (10–500 characters)."
+                                    ></textarea>
+                                </div>
+                                <button
+                                    type="submit"
+                                    name="cancel_order"
+                                    value="1"
+                                    class="confirm-cancellation"
+                                >
+                                    Confirm cancellation
+                                </button>
+                            </form>
+                        </details>
+                    </footer>
+                <?php endif; ?>
+            </article>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</section>
 
 <?php require __DIR__ . '/../includes/footer.php'; ?>

@@ -99,42 +99,63 @@ $related = $related->fetchAll();
 $page_title = $product['title'];
 require __DIR__ . '/../includes/header.php';
 ?>
+<div class="product-page container">
 <nav class="breadcrumbs">
-    <a href="<?= BASE_URL ?>/index.php">Home</a> /
-    <a href="<?= BASE_URL ?>/customer/shop.php">Products</a> /
-    <a href="<?= BASE_URL ?>/customer/shop.php?category=<?= (int)$product['category_id'] ?>"><?= e($product['category_name']) ?></a> /
+    <a href="<?= BASE_URL ?>/index.php">Home</a>
+    <span class="breadcrumb-separator" aria-hidden="true">/</span>
+    <a href="<?= BASE_URL ?>/customer/shop.php">Products</a>
+    <span class="breadcrumb-separator" aria-hidden="true">/</span>
+    <a href="<?= BASE_URL ?>/customer/shop.php?category=<?= (int)$product['category_id'] ?>"><?= e($product['category_name']) ?></a>
+    <span class="breadcrumb-separator" aria-hidden="true">/</span>
     <?= e($product['title']) ?>
 </nav>
 
 <section class="product-detail">
-    <div class="photo">
-        <img src="<?= e(product_image($product['image_path'])) ?>" alt="<?= e($product['title']) ?>">
-    </div>
-    <div>
-        <h1><?= e($product['title']) ?></h1>
-        <div class="facts">
-            <span class="badge"><?= e($product['category_name']) ?></span>
-            <span class="badge">Condition: <?= e($product['item_condition']) ?></span>
-            <?php if ($stock <= 0): ?>
-                <span class="badge badge-out">Sold out</span>
-            <?php elseif ($stock <= 2): ?>
-                <span class="badge badge-warn">Only <?= $stock ?> left</span>
-            <?php else: ?>
-                <span class="badge badge-ok">In stock (<?= $stock ?>)</span>
-            <?php endif; ?>
+    <div class="product-gallery">
+        <a class="back-to-products" href="<?= BASE_URL ?>/customer/shop.php">← Back to Products</a>
+        <div class="photo">
+            <img src="<?= e(product_image($product['image_path'])) ?>" alt="<?= e($product['title']) ?>">
         </div>
+    </div>
+    <div class="product-info">
+        <div class="facts detail-tags">
+            <span class="badge"><?= e($product['category_name']) ?></span>
+            <span class="badge"><?= e($product['item_condition']) ?></span>
+        </div>
+        <h1><?= e($product['title']) ?></h1>
         <div class="price"><?= e(format_price($product['price'])) ?></div>
 
         <?php if (trim((string)$product['description']) !== ''): ?>
             <div class="description"><?= e($product['description']) ?></div>
         <?php endif; ?>
 
+        <div class="product-facts">
+            <div><span>Category</span><strong><?= e($product['category_name']) ?></strong></div>
+            <div><span>Condition</span><strong><?= e($product['item_condition']) ?></strong></div>
+            <div>
+                <span>Available Stock</span>
+                <strong>
+                    <?php if ($stock <= 0): ?>
+                        <span class="badge badge-out">Sold out</span>
+                    <?php elseif ($stock <= 2): ?>
+                        <span class="badge badge-warn">Only <?= $stock ?> left</span>
+                    <?php else: ?>
+                        <span class="badge badge-ok">In stock (<?= $stock ?>)</span>
+                    <?php endif; ?>
+                </strong>
+            </div>
+        </div>
+
         <?php if ($stock > 0): ?>
             <form class="add-to-cart" method="post" action="<?= BASE_URL ?>/customer/cart_add.php">
                 <input type="hidden" name="product_id" value="<?= (int)$product['product_id'] ?>">
                 <div class="qty">
-                    <label for="qty" style="font-size:.8rem;font-weight:bold">Quantity</label>
-                    <input id="qty" type="number" name="quantity" value="1" min="1" max="<?= $stock ?>" required>
+                    <label for="qty">Quantity</label>
+                    <div class="quantity-control">
+                        <button class="quantity-step" type="button" disabled aria-hidden="true">−</button>
+                        <input id="qty" type="number" name="quantity" value="1" min="1" max="<?= $stock ?>" required>
+                        <button class="quantity-step" type="button" disabled aria-hidden="true">+</button>
+                    </div>
                 </div>
                 <button class="btn btn-dark" type="submit">Add to cart</button>
             </form>
@@ -148,23 +169,29 @@ require __DIR__ . '/../includes/header.php';
 </section>
 
 <?php if ($related): ?>
+    <section class="related-products">
     <h2 class="section-title">More from <?= e($product['category_name']) ?></h2>
     <div class="product-grid">
         <?php foreach ($related as $p): $soldOut = (int)$p['stock'] <= 0; ?>
             <article class="product-card<?= $soldOut ? ' sold-out' : '' ?>">
-                <a href="<?= BASE_URL ?>/customer/product.php?id=<?= (int)$p['product_id'] ?>">
-                    <div class="thumb">
+                <div class="thumb">
+                    <a class="product-image-link" href="<?= BASE_URL ?>/customer/product.php?id=<?= (int)$p['product_id'] ?>">
                         <img src="<?= e(product_image($p['image_path'])) ?>" alt="<?= e($p['title']) ?>" loading="lazy">
-                        <?php if ($soldOut): ?><span class="badge badge-out">Sold out</span><?php endif; ?>
-                    </div>
-                    <div class="info">
-                        <span class="title"><?= e($p['title']) ?></span>
-                        <span class="meta"><?= e($p['item_condition']) ?></span>
-                        <span class="price"><?= e(format_price($p['price'])) ?></span>
-                    </div>
-                </a>
+                    </a>
+                    <a class="quick-view" href="<?= BASE_URL ?>/customer/product.php?id=<?= (int)$p['product_id'] ?>">Quick view</a>
+                    <?php if ($soldOut): ?><span class="badge badge-out stock-badge">Sold out</span>
+                    <?php elseif ((int)$p['stock'] <= 2): ?><span class="badge badge-warn stock-badge">Only <?= (int)$p['stock'] ?> left</span><?php endif; ?>
+                </div>
+                <div class="info">
+                    <span class="category-label"><?= e($p['category_name']) ?></span>
+                    <span class="title"><?= e($p['title']) ?></span>
+                    <span class="price"><?= e(format_price($p['price'])) ?></span>
+                    <span class="condition-label"><?= e($p['item_condition']) ?></span>
+                </div>
             </article>
         <?php endforeach; ?>
     </div>
+    </section>
 <?php endif; ?>
+</div>
 <?php require __DIR__ . '/../includes/footer.php';
