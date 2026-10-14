@@ -183,6 +183,16 @@ a:hover {
   gap: 1rem;
 }
 
+.site-header .account-indicator {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .site-header .search {
   display: flex;
   align-items: center;
@@ -906,6 +916,17 @@ body .home-page .category-section {
   font-size: .7rem;
   font-weight: 500;
   letter-spacing: .12em;
+}
+
+.admin-layout .sidebar .account-indicator {
+  flex: 0 0 auto;
+  margin: 6px 0 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1.3;
 }
 
 .admin-layout .sidebar-nav {

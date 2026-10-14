@@ -16,19 +16,33 @@ $page_title = $page_title ?? 'Bryleigh'; $flash = flash_get();
                 <a href="<?= BASE_URL ?>/customer/shop.php">Products</a>
             </div>
             <div class="header-actions">
-                <form class="search" method="get" action="<?= BASE_URL ?>/customer/shop.php">
-                    <input name="q" placeholder="Search" value="<?= e($_GET['q'] ?? '') ?>">
-                    <button class="search-button" type="submit" aria-label="Search">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
-                    </button>
-                </form>
-                <a class="cart-link" href="<?= BASE_URL ?>/customer/cart.php">Cart <span class="cart-count"><?= cart_count() ?></span></a>
-                <?php if (is_logged_in()): ?>
+                <?php if (!is_logged_in()): ?>
+                    <form class="search" method="get" action="<?= BASE_URL ?>/customer/shop.php">
+                        <input name="q" placeholder="Search" value="<?= e($_GET['q'] ?? '') ?>">
+                        <button class="search-button" type="submit" aria-label="Search">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+                        </button>
+                    </form>
+                    <a href="<?= BASE_URL ?>/customer/login.php">Login</a>
+                    <a href="<?= BASE_URL ?>/customer/register.php">Register</a>
+                <?php elseif (is_admin()): ?>
+                    <small class="account-indicator">Logged in as: <?= e($_SESSION['full_name'] ?? 'Admin') ?> (admin)</small>
+                    <a href="<?= BASE_URL ?>/admin/dashboard.php">Go to Admin Dashboard</a>
+                    <a href="<?= BASE_URL ?>/admin/logout.php">Logout</a>
+                <?php elseif (($_SESSION['role'] ?? '') === 'customer'): ?>
+                    <small class="account-indicator">Logged in as: <?= e($_SESSION['full_name'] ?? 'Customer') ?> (customer)</small>
+                    <form class="search" method="get" action="<?= BASE_URL ?>/customer/shop.php">
+                        <input name="q" placeholder="Search" value="<?= e($_GET['q'] ?? '') ?>">
+                        <button class="search-button" type="submit" aria-label="Search">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+                        </button>
+                    </form>
+                    <a class="cart-link" href="<?= BASE_URL ?>/customer/cart.php">Cart <span class="cart-count"><?= cart_count() ?></span></a>
                     <a href="<?= BASE_URL ?>/customer/order_history.php">Order History</a>
                     <a href="<?= BASE_URL ?>/customer/logout.php">Logout</a>
                 <?php else: ?>
-                    <a href="<?= BASE_URL ?>/customer/login.php">Login</a>
-                    <a href="<?= BASE_URL ?>/customer/register.php">Register</a>
+                    <small class="account-indicator">Logged in as: <?= e($_SESSION['full_name'] ?? 'User') ?> (<?= e($_SESSION['role'] ?? 'unknown') ?>)</small>
+                    <a href="<?= BASE_URL ?>/customer/logout.php">Logout</a>
                 <?php endif; ?>
             </div>
         </nav>

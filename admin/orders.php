@@ -239,6 +239,16 @@ require __DIR__ . '/../includes/admin_header.php';
                     <?php endif; ?>
                 </div>
                 <button class="btn btn-dark" type="submit" name="update_order" value="1">Update</button>
+                <button
+                    class="btn btn-outline"
+                    type="submit"
+                    name="delete_order"
+                    value="1"
+                    formaction="<?= BASE_URL ?>/admin/order_delete.php"
+                    formmethod="post"
+                    title="Cancel the order first if you want its stock restored before deleting."
+                    onclick="return confirm('Delete this order permanently? This cannot be undone.')"
+                >Delete</button>
             </form>
         </section>
 

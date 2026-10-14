@@ -11,7 +11,6 @@ $userId = (int) current_user_id();
 $cart = $_SESSION['cart'] ?? [];
 $errors = [];
 $items = [];
-$addresses = [];
 $total = 0.00;
 
 if (empty($_SESSION['checkout_csrf_token'])) {
@@ -85,123 +84,7 @@ if (empty($items) && empty($errors)) {
 }
 
 /*
- * Save a new address to this customer's address book.
- */
-if (
-    $_SERVER['REQUEST_METHOD'] === 'POST' &&
-    ($_POST['action'] ?? '') === 'save_address'
-) {
-    if (!hash_equals(
-        $csrfToken,
-        (string)($_POST['csrf_token'] ?? '')
-    )) {
-        $errors[] = 'Your session token is invalid. Please refresh the page and try again.';
-    } else {
-        $label = trim($_POST['address_label'] ?? '');
-        $name = trim($_POST['new_ship_name'] ?? '');
-        $phone = trim($_POST['new_ship_phone'] ?? '');
-        $street = trim($_POST['new_ship_address'] ?? '');
-        $city = trim($_POST['new_ship_city'] ?? '');
-        $province = trim($_POST['new_ship_province'] ?? '');
-        $zip = trim($_POST['new_ship_zip'] ?? '');
-        $region = trim($_POST['new_ship_region'] ?? '');
-
-        if ($label === '') {
-            $errors[] = 'Please give this address a label, such as Home or Dorm.';
-        }
-        if ($name === '') {
-            $errors[] = 'Please enter the recipient name.';
-        }
-        if ($phone === '') {
-            $errors[] = 'Please enter the phone number.';
-        }
-        if ($street === '') {
-            $errors[] = 'Please enter the street address.';
-        }
-        if ($city === '') {
-            $errors[] = 'Please enter the city.';
-        }
-        if ($province === '') {
-            $errors[] = 'Please enter the province.';
-        }
-        if ($zip === '') {
-            $errors[] = 'Please enter the ZIP code.';
-        }
-        if ($region === '') {
-            $errors[] = 'Please enter the region.';
-        }
-
-        if (strlen($label) > 60) {
-            $errors[] = 'The address label must be 60 characters or fewer.';
-        }
-        if (strlen($name) > 150) {
-            $errors[] = 'The recipient name must be 150 characters or fewer.';
-        }
-        if (strlen($phone) > 40) {
-            $errors[] = 'The phone number must be 40 characters or fewer.';
-        }
-        if (strlen($street) > 255) {
-            $errors[] = 'The street address must be 255 characters or fewer.';
-        }
-        if (strlen($city) > 100) {
-            $errors[] = 'The city must be 100 characters or fewer.';
-        }
-        if (strlen($province) > 100) {
-            $errors[] = 'The province must be 100 characters or fewer.';
-        }
-        if (strlen($zip) > 20) {
-            $errors[] = 'The ZIP code must be 20 characters or fewer.';
-        }
-        if (strlen($region) > 100) {
-            $errors[] = 'The region must be 100 characters or fewer.';
-        }
-
-        if (!$errors) {
-            try {
-                $stmt = $pdo->prepare("
-                    INSERT INTO customer_addresses (
-                        user_id,
-                        address_label,
-                        recipient_name,
-                        phone,
-                        street_address,
-                        city,
-                        province,
-                        zip_code,
-                        region
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ");
-
-                $stmt->execute([
-                    $userId,
-                    $label,
-                    $name,
-                    $phone,
-                    $street,
-                    $city,
-                    $province,
-                    $zip,
-                    $region
-                ]);
-
-                flash_set(
-                    'success',
-                    'Address saved. You can now select it for checkout.'
-                );
-
-                redirect('customer/checkout.php');
-            } catch (Throwable $e) {
-                $errors[] = 'Unable to save the address. Please check that the customer_addresses table has been created.';
-            }
-        }
-    }
-}
-
-/*
- * Place the order using an address belonging to the signed-in customer.
- * Shipping information is copied into the order so later address changes
- * do not alter existing orders.
+ * Place the order using the delivery information submitted with checkout.
  */
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST' &&
@@ -215,13 +98,41 @@ if (
         $errors[] = 'Your session token is invalid. Please refresh the page and try again.';
     }
 
-    $addressId = (int)($_POST['address_id'] ?? 0);
+    $shipName = trim($_POST['ship_name'] ?? '');
+    $shipPhone = trim($_POST['ship_phone'] ?? '');
+    $shipAddress = trim($_POST['ship_address'] ?? '');
+    $shipCity = trim($_POST['ship_city'] ?? '');
+    $shipProvince = trim($_POST['ship_province'] ?? '');
+    $shipZip = trim($_POST['ship_zip'] ?? '');
+    $shipRegion = trim($_POST['ship_region'] ?? '');
     $paymentMethod = trim($_POST['payment_method'] ?? '');
     $paymentReference = trim($_POST['payment_reference'] ?? '');
     $deliveryOption = trim($_POST['delivery_option'] ?? '');
 
-    if ($addressId <= 0) {
-        $errors[] = 'Please select a saved delivery address.';
+    foreach ([
+        'Recipient name' => $shipName,
+        'Phone number' => $shipPhone,
+        'Street address' => $shipAddress,
+        'City' => $shipCity,
+        'Province' => $shipProvince,
+        'ZIP code' => $shipZip,
+        'Region' => $shipRegion,
+    ] as $field => $value) {
+        if ($value === '') {
+            $errors[] = 'Please enter the ' . strtolower($field) . '.';
+        }
+    }
+
+    if (
+        strlen($shipName) > 150 ||
+        strlen($shipPhone) > 50 ||
+        strlen($shipAddress) > 255 ||
+        strlen($shipCity) > 100 ||
+        strlen($shipProvince) > 100 ||
+        strlen($shipZip) > 20 ||
+        strlen($shipRegion) > 100
+    ) {
+        $errors[] = 'Please check the length of your delivery information.';
     }
 
     if (!in_array(
@@ -243,31 +154,6 @@ if (
     if (!$errors) {
         try {
             $pdo->beginTransaction();
-
-            // Verify that the selected address belongs to this customer.
-            $addressStmt = $pdo->prepare("
-                SELECT
-                    recipient_name,
-                    phone,
-                    street_address,
-                    city,
-                    province,
-                    zip_code,
-                    region
-                FROM customer_addresses
-                WHERE address_id = ?
-                  AND user_id = ?
-                FOR UPDATE
-            ");
-
-            $addressStmt->execute([$addressId, $userId]);
-            $address = $addressStmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$address) {
-                throw new RuntimeException(
-                    'The selected address was not found in your address book. Please select it again.'
-                );
-            }
 
             /*
              * Lock products while checking stock to prevent overselling.
@@ -319,7 +205,7 @@ if (
             unset($item);
 
             /*
-             * Create the order using a snapshot of the selected address.
+             * Create the order using the submitted delivery information.
              */
             $orderStmt = $pdo->prepare("
                 INSERT INTO orders (
@@ -354,13 +240,13 @@ if (
                 $paymentMethod,
                 $paymentReference !== '' ? $paymentReference : null,
                 $deliveryOption,
-                $address['recipient_name'],
-                $address['phone'],
-                $address['street_address'],
-                $address['city'],
-                $address['province'],
-                $address['zip_code'],
-                $address['region']
+                $shipName,
+                $shipPhone,
+                $shipAddress,
+                $shipCity,
+                $shipProvince,
+                $shipZip,
+                $shipRegion
             ]);
 
             $orderId = (int)$pdo->lastInsertId();
@@ -419,36 +305,6 @@ if (
     }
 }
 
-/*
- * Load only addresses belonging to the signed-in customer.
- */
-try {
-    $addressListStmt = $pdo->prepare("
-        SELECT
-            address_id,
-            address_label,
-            recipient_name,
-            phone,
-            street_address,
-            city,
-            province,
-            zip_code,
-            region
-        FROM customer_addresses
-        WHERE user_id = ?
-        ORDER BY address_id DESC
-    ");
-
-    $addressListStmt->execute([$userId]);
-    $addresses = $addressListStmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Throwable $e) {
-    $errors[] = 'The address book could not be loaded. Make sure the customer_addresses table has been created.';
-}
-
-$selectedAddressId = (int)(
-    $_POST['address_id'] ?? ($addresses[0]['address_id'] ?? 0)
-);
-
 $page_title = 'Checkout';
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -478,292 +334,96 @@ if (
 <?php if ($items): ?>
     <div class="checkout-layout">
         <div class="checkout-main">
-            <section class="address-book checkout-card">
-                <?php if ($addresses): ?>
-                    <form method="post" class="checkout-form" id="place-order-form">
-                        <input
-                            type="hidden"
-                            name="csrf_token"
-                            value="<?= e($csrfToken) ?>"
-                        >
+            <section class="checkout-card">
+                <form method="post" class="checkout-form" id="place-order-form">
+                    <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
+                    <input type="hidden" name="action" value="place_order">
 
-                        <input
-                            type="hidden"
-                            name="action"
-                            value="place_order"
-                        >
-
-                        <div class="checkout-section">
-                            <h2>Customer Information</h2>
-                            <div class="form-group">
-                                <label for="address_id">Choose an address</label>
-
-                                <select name="address_id" id="address_id" required>
-                                    <option value="">Select a saved address</option>
-
-                                    <?php foreach ($addresses as $address): ?>
-                                        <?php
-                                        $addressText =
-                                            $address['address_label'] . ' — ' .
-                                            $address['recipient_name'] . ', ' .
-                                            $address['street_address'] . ', ' .
-                                            $address['city'] . ', ' .
-                                            $address['province'] . ' ' .
-                                            $address['zip_code'] . ', ' .
-                                            $address['region'] . ' (' .
-                                            $address['phone'] . ')';
-                                        ?>
-
-                                        <option
-                                            value="<?= (int)$address['address_id'] ?>"
-                                            <?= $selectedAddressId === (int)$address['address_id']
-                                                ? 'selected'
-                                                : '' ?>
-                                        >
-                                            <?= e($addressText) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+                    <div class="checkout-section">
+                        <h2>Delivery Information</h2>
+                        <div class="form-group">
+                            <label for="ship_name">Recipient Name</label>
+                            <input type="text" id="ship_name" name="ship_name" required maxlength="150" value="<?= e($_POST['ship_name'] ?? ($_SESSION['full_name'] ?? '')) ?>">
                         </div>
-
-                        <div class="checkout-section">
-                            <h2>Delivery Information</h2>
-                            <h3>Delivery Option</h3>
-                            <div class="form-group">
-                                <label for="delivery_option">Delivery Option</label>
-
-                                <select
-                                    name="delivery_option"
-                                    id="delivery_option"
-                                    required
-                                >
-                                    <option value="">Select delivery option</option>
-
-                                    <?php foreach (['Standard', 'Express', 'Pick-up'] as $option): ?>
-                                        <option
-                                            value="<?= e($option) ?>"
-                                            <?= ($_POST['delivery_option'] ?? '') === $option
-                                                ? 'selected'
-                                                : '' ?>
-                                        >
-                                            <?= e($option) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+                        <div class="form-group">
+                            <label for="ship_phone">Phone Number</label>
+                            <input type="text" id="ship_phone" name="ship_phone" required maxlength="50" value="<?= e($_POST['ship_phone'] ?? '') ?>">
                         </div>
-
-                        <div class="checkout-section">
-                            <h2>Payment Details</h2>
-                            <div class="form-group">
-                                <label for="payment_method">Payment Method</label>
-
-                                <select
-                                    name="payment_method"
-                                    id="payment_method"
-                                    required
-                                >
-                                    <option value="">Select payment method</option>
-
-                                    <?php foreach (['GCash', 'Cash on Delivery'] as $method): ?>
-                                        <option
-                                            value="<?= e($method) ?>"
-                                            <?= ($_POST['payment_method'] ?? '') === $method
-                                                ? 'selected'
-                                                : '' ?>
-                                        >
-                                            <?= e($method) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="payment_reference">Payment Reference</label>
-
-                                <input
-                                    type="text"
-                                    id="payment_reference"
-                                    name="payment_reference"
-                                    value="<?= e($_POST['payment_reference'] ?? '') ?>"
-                                    placeholder="Optional"
-                                >
-                            </div>
+                        <div class="form-group">
+                            <label for="ship_address">Street Address</label>
+                            <input type="text" id="ship_address" name="ship_address" required maxlength="255" value="<?= e($_POST['ship_address'] ?? '') ?>">
                         </div>
-                    </form>
-                <?php else: ?>
-                    <h2>Customer Information</h2>
-                    <p>
-                        You have no saved addresses yet.
-                        Add one below before placing your order.
-                    </p>
-                <?php endif; ?>
-            </section>
+                        <div class="form-group">
+                            <label for="ship_city">City</label>
+                            <input type="text" id="ship_city" name="ship_city" required maxlength="100" value="<?= e($_POST['ship_city'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <label for="ship_province">Province</label>
+                            <input type="text" id="ship_province" name="ship_province" required maxlength="100" value="<?= e($_POST['ship_province'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <label for="ship_zip">ZIP Code</label>
+                            <input type="text" id="ship_zip" name="ship_zip" required maxlength="20" value="<?= e($_POST['ship_zip'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <label for="ship_region">Region</label>
+                            <input type="text" id="ship_region" name="ship_region" required maxlength="100" value="<?= e($_POST['ship_region'] ?? '') ?>">
+                        </div>
+                    </div>
 
-            <section class="add-address checkout-card">
-                <h2>Delivery Information: Add a New Address</h2>
+                    <div class="checkout-section">
+                        <h2>Delivery Option</h2>
+                        <div class="form-group">
+                            <label for="delivery_option">Delivery Option</label>
+                            <select name="delivery_option" id="delivery_option" required>
+                                <option value="">Select delivery option</option>
+                                <?php foreach (['Standard', 'Express', 'Pick-up'] as $option): ?>
+                                    <option value="<?= e($option) ?>" <?= ($_POST['delivery_option'] ?? '') === $option ? 'selected' : '' ?>><?= e($option) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
 
-                <form method="post" class="checkout-form">
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="<?= e($csrfToken) ?>"
-            >
-
-            <input
-                type="hidden"
-                name="action"
-                value="save_address"
-            >
-
-            <div class="form-group">
-                <label for="address_label">Address Label</label>
-
-                <input
-                    type="text"
-                    id="address_label"
-                    name="address_label"
-                    required
-                    maxlength="60"
-                    value="<?= e($_POST['address_label'] ?? '') ?>"
-                    placeholder="e.g. Home, Dorm, Work"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="new_ship_name">Recipient Name</label>
-
-                <input
-                    type="text"
-                    id="new_ship_name"
-                    name="new_ship_name"
-                    required
-                    maxlength="150"
-                    value="<?= e(
-                        $_POST['new_ship_name'] ??
-                        ($_SESSION['full_name'] ?? '')
-                    ) ?>"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="new_ship_phone">Phone Number</label>
-
-                <input
-                    type="text"
-                    id="new_ship_phone"
-                    name="new_ship_phone"
-                    required
-                    maxlength="40"
-                    value="<?= e($_POST['new_ship_phone'] ?? '') ?>"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="new_ship_address">Street Address</label>
-
-                <input
-                    type="text"
-                    id="new_ship_address"
-                    name="new_ship_address"
-                    required
-                    maxlength="255"
-                    value="<?= e($_POST['new_ship_address'] ?? '') ?>"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="new_ship_city">City</label>
-
-                <input
-                    type="text"
-                    id="new_ship_city"
-                    name="new_ship_city"
-                    required
-                    maxlength="100"
-                    value="<?= e($_POST['new_ship_city'] ?? '') ?>"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="new_ship_province">Province</label>
-
-                <input
-                    type="text"
-                    id="new_ship_province"
-                    name="new_ship_province"
-                    required
-                    maxlength="100"
-                    value="<?= e($_POST['new_ship_province'] ?? '') ?>"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="new_ship_zip">ZIP Code</label>
-
-                <input
-                    type="text"
-                    id="new_ship_zip"
-                    name="new_ship_zip"
-                    required
-                    maxlength="20"
-                    value="<?= e($_POST['new_ship_zip'] ?? '') ?>"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="new_ship_region">Region</label>
-
-                <input
-                    type="text"
-                    id="new_ship_region"
-                    name="new_ship_region"
-                    required
-                    maxlength="100"
-                    value="<?= e($_POST['new_ship_region'] ?? '') ?>"
-                >
-            </div>
-
-                    <button class="btn btn-dark" type="submit">
-                        Save Address
-                    </button>
+                    <div class="checkout-section">
+                        <h2>Payment Details</h2>
+                        <div class="form-group">
+                            <label for="payment_method">Payment Method</label>
+                            <select name="payment_method" id="payment_method" required>
+                                <option value="">Select payment method</option>
+                                <?php foreach (['GCash', 'Cash on Delivery'] as $method): ?>
+                                    <option value="<?= e($method) ?>" <?= ($_POST['payment_method'] ?? '') === $method ? 'selected' : '' ?>><?= e($method) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="payment_reference">Payment Reference</label>
+                            <input type="text" id="payment_reference" name="payment_reference" value="<?= e($_POST['payment_reference'] ?? '') ?>" placeholder="Optional">
+                        </div>
+                    </div>
                 </form>
             </section>
         </div>
 
         <aside class="order-summary checkout-summary">
             <h2>Order Summary</h2>
-
             <?php foreach ($items as $item): ?>
                 <div class="order-item">
                     <div>
                         <strong><?= e($item['title']) ?></strong>
-                        <p>
-                            <?= e($item['quantity']) ?> ×
-                            <?= format_price($item['price']) ?>
-                        </p>
+                        <p><?= e($item['quantity']) ?> × <?= format_price($item['price']) ?></p>
                     </div>
-
-                    <strong>
-                        <?= format_price($item['subtotal']) ?>
-                    </strong>
+                    <strong><?= format_price($item['subtotal']) ?></strong>
                 </div>
             <?php endforeach; ?>
-
             <div class="checkout-summary-total">
                 <span>Total</span>
                 <strong><?= format_price($total) ?></strong>
             </div>
-
-            <?php if ($addresses): ?>
-                <button class="btn btn-dark checkout-place-order" type="submit" form="place-order-form">
-                    Place Order
-                </button>
-            <?php endif; ?>
+            <button class="btn btn-dark checkout-place-order" type="submit" form="place-order-form">
+                Place Order
+            </button>
         </aside>
     </div>
-
 <?php else: ?>
 
     <div class="checkout-empty">

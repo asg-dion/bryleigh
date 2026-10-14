@@ -112,7 +112,7 @@ require __DIR__ . '/../includes/header.php';
                             <div class="cart-item-quantity">
                                 <label for="quantity-<?= (int)$item['product_id'] ?>">Quantity</label>
                                 <div class="cart-quantity-control">
-                                    <button type="button" disabled aria-hidden="true">−</button>
+                                    <button type="button" data-quantity-change="-1" aria-label="Decrease quantity">−</button>
                                     <input
                                         id="quantity-<?= (int)$item['product_id'] ?>"
                                         type="number"
@@ -121,7 +121,7 @@ require __DIR__ . '/../includes/header.php';
                                         min="1"
                                         max="<?= (int)$item['stock'] ?>"
                                     >
-                                    <button type="button" disabled aria-hidden="true">+</button>
+                                    <button type="button" data-quantity-change="1" aria-label="Increase quantity">+</button>
                                 </div>
                             </div>
                             <strong class="cart-item-subtotal"><?= format_price($item['subtotal']) ?></strong>
