@@ -50,6 +50,12 @@ $orderStmt = $pdo->prepare("
         o.shipping_status,
         o.order_status,
         o.ship_name,
+        o.ship_phone,
+        o.ship_address,
+        o.ship_city,
+        o.ship_province,
+        o.ship_zip,
+        o.ship_region,
         o.created_at,
         u.full_name,
         u.email
@@ -204,6 +210,8 @@ require __DIR__ . '/../includes/admin_header.php';
                         <div class="order-meta">
                             <div><span class="meta-label">Type</span><span class="meta-value"><?= e($order['delivery_option']) ?></span></div>
                             <div><span class="meta-label">Recipient</span><span class="meta-value"><?= e($order['ship_name']) ?></span></div>
+                            <div><span class="meta-label">Phone</span><span class="meta-value"><?= e($order['ship_phone']) ?></span></div>
+                            <div><span class="meta-label">Address</span><span class="meta-value"><?= e($order['ship_address']) ?>, <?= e($order['ship_city']) ?>, <?= e($order['ship_province']) ?> <?= e($order['ship_zip']) ?>, <?= e($order['ship_region']) ?></span></div>
                         </div>
                     </div>
                 </div>

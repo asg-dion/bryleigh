@@ -3,7 +3,7 @@ require_once __DIR__ . '/db.php'; require_once __DIR__ . '/helpers.php'; require
 $page_title = $page_title ?? 'Bryleigh'; $flash = flash_get();
 ?><!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title><?= e($page_title) ?> | Bryleigh</title><link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css"><link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/catalog.css"><link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/orders.css"></head><body>
 <header class="site-header">
-    <div class="announcement-bar">Preloved finds, free pickup for orders over ₱1,500</div>
+    <div class="announcement-bar">Preloved finds, free delivery for orders over ₱1,500</div>
     <div class="header-inner">
         <a class="logo" href="<?= BASE_URL ?>/index.php">BRYLEIGH</a>
         <input class="menu-toggle" type="checkbox" id="site-menu-toggle">
